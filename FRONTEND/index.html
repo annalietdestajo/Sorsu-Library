@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Library Student Check-In</title>
+
+<style>
+* { box-sizing:border-box; margin:0; font-family:'Segoe UI',Tahoma,Geneva,Verdana,sans-serif; }
+
+body{
+  background:#6b0f1a;
+  height:100vh;
+  display:flex;
+  justify-content:center;
+  align-items:center;
+}
+
+.card{
+  background:#fff;
+  padding:60px 50px;
+  border-radius:18px;
+  box-shadow:0 10px 30px rgba(0,0,0,0.3);
+  text-align:center;
+  width:520px;
+  transition:.3s;
+}
+
+.card.successFlash{
+  background:#e8fff1;
+  transform:scale(1.02);
+}
+
+.logo{
+  width:200px;
+  margin-bottom:25px;
+  animation:floatLogo 3s ease-in-out infinite;
+}
+
+@keyframes floatLogo{
+  0%{transform:translateY(0) scale(1);}
+  50%{transform:translateY(-12px) scale(1.06);}
+  100%{transform:translateY(0) scale(1);}
+}
+
+h2{ color:#6b0f1a; margin-bottom:30px; }
+
+input{
+  width:100%;
+  padding:20px;
+  font-size:22px;
+  border-radius:10px;
+  border:2px solid #ccc;
+  margin-bottom:20px;
+  text-align:left;
+}
+
+input:focus{
+  border-color:#6b0f1a;
+  box-shadow:0 0 10px rgba(107,15,26,.3);
+}
+
+button{
+  width:100%;
+  padding:18px;
+  font-size:20px;
+  border:none;
+  border-radius:10px;
+  background:#6b0f1a;
+  color:#fff;
+  cursor:pointer;
+}
+
+button:hover{ background:#8e1b2c; }
+
+.register-btn{ background:#e67e22; display:none; margin-top:10px; }
+.register-card{ display:none; margin-top:20px; }
+
+.success{ color:green; font-weight:bold; margin-bottom:10px; }
+.error{ color:red; font-weight:bold; margin-bottom:10px; }
+</style>
+</head>
+
+<body>
+
+<div class="card" id="card">
+
+<img src="c:\\Users\\Administrator\\Downloads\\Revised-SSU-Logo-small-as-of-04-30-2021.png" class="logo">
+
+<h2>Library Check-In</h2>
+
+<div class="success" id="checkinSuccess"></div>
+<div class="error" id="checkinError"></div>
+
+<input type="text" id="studentNumber" placeholder="Enter Student Number">
+<button onclick="checkIn()">CHECK-IN</button>
+
+<button class="register-btn" id="registerButton" onclick="showRegisterCard()">Register Student</button>
+
+<div class="register-card" id="registerCard">
+  <input id="regNumber" readonly>
+  <input id="regName" placeholder="Full Name">
+  <input id="regCourse" placeholder="Course">
+  <button onclick="registerStudent()">Register & Check-In</button>
+</div>
+
+</div>
+
+<script>
+const API='http://localhost:5000';
+
+const input=document.getElementById('studentNumber');
+const card=document.getElementById('card');
+const registerCard=document.getElementById('registerCard');
+
+/* FOCUS ONLY WHEN NEEDED */
+function focusMain(){
+  if(registerCard.style.display!=='block'){
+    input.focus();
+  }
+}
+
+/* focus on first load */
+window.onload=focusMain;
+
+/* ENTER KEY SUPPORT */
+input.addEventListener("keypress",e=>{
+  if(e.key==="Enter") checkIn();
+});
+
+function flashSuccess(){
+  card.classList.add("successFlash");
+  setTimeout(()=>card.classList.remove("successFlash"),600);
+}
+
+function showMessage(id,msg,success=true){
+  const el=document.getElementById(id);
+  el.innerText=msg;
+  el.style.display=msg?'block':'none';
+  el.style.color=success?'green':'red';
+}
+
+function showRegisterCard(){
+  registerCard.style.display='block';
+  registerButton.style.display='none';
+  document.getElementById('regName').focus(); // focus sa fullname
+}
+
+async function checkIn(){
+  const sn=input.value.trim();
+  if(!sn) return showMessage('checkinError','Please enter Student Number',false);
+
+  const res=await fetch(`${API}/students`);
+  const students=await res.json();
+  const student=students.find(s=>s.student_number===sn);
+
+  if(student){
+    await fetch(`${API}/checkin`,{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({student_number:sn})
+    });
+
+    flashSuccess();
+    showMessage('checkinSuccess',`Welcome ${student.full_name}`);
+  }else{
+    registerButton.style.display='block';
+    regNumber.value=sn;
+  }
+
+  input.value='';
+  focusMain();
+}
+
+async function registerStudent(){
+  const sn=regNumber.value;
+  const name=regName.value;
+  const course=regCourse.value;
+
+  if(!name||!course) return;
+
+  await fetch(`${API}/student`,{
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({student_number:sn,full_name:name,course:course})
+  });
+
+  await fetch(`${API}/checkin`,{
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({student_number:sn})
+  });
+
+  flashSuccess();
+  showMessage('checkinSuccess',`Registered & Welcome ${name}`);
+
+  registerCard.style.display='none';
+  registerButton.style.display='none';
+
+  focusMain();
+}
+</script>
+
+</body>
+</html>

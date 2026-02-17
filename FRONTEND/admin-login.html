@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Admin Login</title>
+<link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<style>
+  /* GENERAL */
+  * { box-sizing: border-box; margin:0; padding:0; font-family: 'Roboto', sans-serif; }
+  
+  body {
+    height:100vh;
+    display:flex;
+    justify-content:center;
+    align-items:center;
+    background: maroon; /* MAROON BACKGROUND */
+  }
+
+  /* LOGIN BOX */
+  .login-box {
+    background: rgba(255,255,255,0.1); /* TRANSPARENT BOX */
+    width: 380px;
+    padding: 40px 30px;
+    border-radius: 12px;
+    box-shadow: 0 12px 30px rgba(0,0,0,0.3);
+    text-align: center;
+    transition: transform 0.3s ease;
+    backdrop-filter: blur(10px);
+  }
+  .login-box:hover { transform: translateY(-5px); }
+
+  /* SCHOOL LOGO */
+  .login-box img {
+    width: 80px;
+    height: 80px;
+    margin-bottom: 20px;
+    border-radius: 50%;
+    border: 2px solid #fff;
+  }
+
+  /* TITLE */
+  .login-box h2 {
+    color: #fff;
+    margin-bottom: 25px;
+    font-weight: 700;
+  }
+
+  /* INPUT CONTAINER */
+  .input-group {
+    position: relative;
+    margin-bottom: 20px;
+  }
+  .input-group i {
+    position: absolute;
+    top: 50%;
+    left: 12px;
+    transform: translateY(-50%);
+    color: #fff;
+    font-size: 16px;
+  }
+  .input-group input {
+    width: 100%;
+    padding: 14px 14px 14px 38px;
+    border-radius: 8px;
+    border: 1px solid #fff;
+    font-size: 16px;
+    background: rgba(255,255,255,0.2);
+    color: #fff;
+    transition: all 0.3s ease;
+  }
+  .input-group input::placeholder {
+    color: #fff;
+    opacity: 0.8;
+  }
+  .input-group input:focus {
+    border-color: #fff;
+    box-shadow: 0 0 8px rgba(255,255,255,0.4);
+    outline: none;
+  }
+
+  /* BUTTON */
+  .login-box button {
+    width: 100%;
+    padding: 14px;
+    background: #fff;
+    color: maroon;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    font-weight: 600;
+    font-size: 16px;
+    transition: all 0.3s ease;
+  }
+  .login-box button:hover {
+    background: #f1f1f1;
+    transform: translateY(-2px);
+  }
+
+  /* ERROR MESSAGE */
+  #error {
+    color: #ff8080;
+    margin-top: 10px;
+    min-height: 20px;
+    font-weight: 500;
+  }
+</style>
+</head>
+<body>
+
+<div class="login-box">
+  <img src="C:\Users\Administrator\OneDrive\Documents\Library Visitor Monitoring System\FRONTEND\Revised-SSU-Logo-small-as-of-04-30-2021.png" alt="School Logo">
+
+  <h2>SORSU LIBRARY</h2>
+
+  <div class="input-group">
+    <i class="fas fa-user"></i>
+    <input id="username" placeholder="Username" autocomplete="off">
+  </div>
+
+  <div class="input-group">
+    <i class="fas fa-lock"></i>
+    <input id="password" type="password" placeholder="Password" autocomplete="off">
+  </div>
+
+  <button onclick="login()"><i class="fas fa-sign-in-alt"></i> LOGIN</button>
+  <p id="error"></p>
+</div>
+
+<script>
+async function login(){
+  const res = await fetch("http://localhost:5000/admin/login",{
+    method:"POST",
+    headers:{ "Content-Type":"application/json" },
+    body:JSON.stringify({
+      username: document.getElementById("username").value,
+      password: document.getElementById("password").value
+    })
+  });
+
+  const data = await res.json();
+
+  if(data.success){
+    localStorage.setItem("adminLoggedIn","true");
+    window.location.href="dashboard.html";
+  }else{
+    document.getElementById("error").innerText="Invalid Admin Login";
+  }
+}
+</script>
+
+</body>
+</html>

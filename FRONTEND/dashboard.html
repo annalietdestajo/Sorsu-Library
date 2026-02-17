@@ -1,0 +1,448 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Library Dashboard</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<script src="https://cdn.sheetjs.com/xlsx-latest/package/dist/xlsx.full.min.js"></script>
+<style>
+* { box-sizing: border-box; margin: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+body { display: flex; background: #800000; color: #fff; transition: background 0.3s ease; height: 100vh; }
+
+/* SIDEBAR */
+.sidebar { width: 240px; height: 100vh; color: white; padding: 20px; position: fixed; display: flex; flex-direction: column; transition: width 0.3s ease; background: #660000; border-radius: 0 12px 12px 0; align-items: center; }
+.sidebar img { width: 100px; margin-bottom: 20px; border-radius: 50%; border: 2px solid #fff; }
+.sidebar h2 { margin-bottom: 30px; font-weight: 600; letter-spacing: 1px; text-align:center; }
+
+/* SIDEBAR BUTTONS */
+.sidebar button {
+  width: 100%;
+  padding: 12px 15px;
+  margin-bottom: 8px;
+  border: none;
+  background: maroon;
+  color: white;
+  cursor: pointer;
+  text-align: left;
+  border-radius: 8px;
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  gap: 12px; /* space between icon and text */
+  transition: all 0.3s ease;
+  font-size: 16px;
+}
+
+.sidebar button i {
+  min-width: 20px; /* keeps icons aligned */
+  font-size: 18px;
+}
+
+.sidebar button:hover, 
+.sidebar button.active {
+  background: linear-gradient(135deg, #8e44ad, #5e2d91); /* smooth gradient hover */
+  transform: translateX(5px); /* subtle slide effect */
+  box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+}
+
+.logout-btn {
+  margin-top: auto;
+  background: #2980b9;
+  justify-content: center; /* center icon and text */
+}
+
+.logout-btn:hover {
+  background: #1c5980;
+  transform: translateY(-2px);
+}
+
+/* MAIN AREA */
+.main { flex: 1; margin-left: 240px; padding: 30px; background: #fff; color: #000; border-radius: 12px; min-height: 100vh; transition: all 0.3s ease; }
+
+/* TABS */
+.tab { display: block; opacity: 0; max-height: 0; overflow: hidden; transition: opacity 0.4s ease, max-height 0.4s ease; }
+.tab.active { opacity: 1; max-height: 2000px; }
+
+/* CARDS */
+.card { background: #fff; border-radius: 12px; padding: 20px; margin-bottom: 30px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); }
+.card table { width: 100%; border-collapse: collapse; border-radius: 12px; overflow: hidden; background: #fff; }
+.table-wrapper { max-height: 400px; overflow-y: auto; overflow-x: auto; border-radius: 12px; background: #fff; }
+.table-wrapper table { width: 100%; min-width: 600px; border-collapse: collapse; }
+.table-wrapper table th, .table-wrapper table td { padding: 12px; border-bottom: 1px solid rgba(0,0,0,0.1); text-align: left; transition: background 0.3s ease, transform 0.2s ease; }
+.table-wrapper table th { background: #000; color: #fff; font-weight: 600; position: sticky; top: 0; z-index: 2; }
+.table-wrapper table tr:nth-child(even) { background: #fff; color: #000; }
+.table-wrapper table tr:nth-child(odd) { background: #f9f9f9; color: #000; }
+.table-wrapper table tr:hover { background: rgba(153,0,0,0.1); transform: scale(1.02); box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
+
+/* HEADER */
+.header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+
+/* INPUTS */
+input { padding: 12px; width: 250px; border-radius: 8px; border: 1px solid #ccc; font-size: 15px; transition: all 0.3s ease; }
+input:focus { outline: none; border-color: #800000; box-shadow: 0 0 6px rgba(128,0,0,0.3); }
+
+/* BUTTONS */
+button.action { padding: 10px 18px; border: none; border-radius: 8px; cursor: pointer; transition: all 0.3s ease; font-weight: 500; display:flex; align-items:center; gap:6px; background:#8e44ad; color:#fff; }
+button.action:hover { transform: translateY(-2px); opacity: 0.9; }
+button.secondary { font-weight:bold; background:#732d91; color:#fff; }
+button.secondary:hover { opacity: 0.9; transform: translateY(-2px); }
+
+/* BUTTON SPACING FOR STUDENTS TAB */
+.header-buttons { display: flex; gap: 15px; }
+
+/* CHECK-IN ANIMATION */
+.new-entry { animation: highlight 2s ease-in-out; }
+@keyframes highlight { 0% { background-color: #ffff99; } 100% { background-color: transparent; } }
+
+/* GRID STATS */
+.grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; }
+.stat { padding: 25px; border-radius: 12px; text-align: center; box-shadow: 0 4px 15px rgba(0,0,0,0.08); transition: transform 0.2s ease, box-shadow 0.2s ease; color: white; position: relative; overflow: hidden; }
+.stat:hover { transform: translateY(-3px); box-shadow: 0 8px 20px rgba(0,0,0,0.15); }
+.stat h3 { margin-bottom: 10px; font-weight: 500; font-size: 18px; }
+.stat p { font-size: 24px; font-weight: 700; margin-top: 8px; color: #fff; }
+.stat i { font-size: 30px; position: absolute; top: 15px; right: 15px; opacity: 0.3; }
+
+/* UNIQUE COLORS FOR STATS */
+.total-students { background: linear-gradient(135deg,#b30000,#800000); }
+.total-visits { background: linear-gradient(135deg,#e67e22,#b34700); }
+.peak-month { background: linear-gradient(135deg,#2980b9,#1c5980); }
+.top-student { background: linear-gradient(135deg,#27ae60,#1e8449); }
+.top-course-visits { background: linear-gradient(135deg,#f39c12,#d35400); }
+
+/* MODALS */
+.modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.4); justify-content: center; align-items: center; transition: opacity 0.3s ease; }
+.modal-content { background: black; padding: 25px; border-radius: 12px; width: 320px; transition: transform 0.3s ease; }
+.modal-content input { width: 100%; margin-bottom: 10px; padding: 10px; border-radius: 8px; border: 1px solid #ccc; transition: all 0.3s ease; }
+.modal-content input:focus { outline: none; border-color: #800000; box-shadow: 0 0 6px rgba(128,0,0,0.3); }
+.modal-buttons { display: flex; justify-content: space-between; margin-top: 10px; }
+
+/* RESPONSIVE */
+@media(max-width:900px){
+  .main { margin-left: 0; width: 100%; padding: 20px; border-radius:0; }
+  .sidebar { width: 100%; height: auto; position: relative; display: flex; flex-wrap: wrap; border-radius:0; }
+  .sidebar button { flex: 1 1 45%; margin: 5px; }
+}
+
+.action-dropdown {
+  position: relative;
+  display: inline-block;
+}
+
+.action-dropdown .dropdown-content {
+  display: none;
+  position: absolute;
+  right: 0;
+  background-color: #800000;
+  min-width: 180px;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+  z-index: 1000;
+  flex-direction: column;
+}
+
+.action-dropdown .dropdown-content button {
+  width: 100%;
+  padding: 10px 15px;
+  background: none;
+  border: none;
+  text-align: left;
+  color: #fff;
+  font-weight: 500;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.action-dropdown .dropdown-content button:hover {
+  background: #660000;
+}
+
+.action-dropdown:hover .dropdown-content {
+  display: flex;
+  flex-direction: column;
+}
+</style>
+</head>
+<body>
+
+  <div class="sidebar">
+    <img src="C:\\Users\\Administrator\\OneDrive\\Documents\\Library Visitor Monitoring System\\FRONTEND\\Revised-SSU-Logo-small-as-of-04-30-2021.png" alt="School Logo">
+    <h2>Library System</h2>
+    <button onclick="openTab('checkin')"><i class="fas fa-sign-in-alt"></i> Check-In</button>
+    <button onclick="openTab('students')"><i class="fas fa-user-graduate"></i> Students</button>
+    <button onclick="openTab('visitlog')"><i class="fas fa-history"></i> Visit Log</button>
+    <button onclick="openTab('reports')"><i class="fas fa-chart-pie"></i> Reports</button>
+    <button class="logout-btn" onclick="logout()"><i class="fas fa-sign-out-alt"></i> Logout</button>
+  </div>
+  
+<div class="main">
+  <!-- CHECK-IN -->
+  <div id="checkin" class="tab active">
+    <div class="card">
+      <h3>Recent Visits</h3>
+      <div class="table-wrapper">
+        <table>
+          <thead>
+            <tr><th>Student #</th><th>Name</th><th>Course</th><th>Date & Time</th></tr>
+          </thead>
+          <tbody id="recentVisits"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- STUDENTS -->
+  <div id="students" class="tab">
+    <div class="header">
+      <h2>Manage Student Records</h2>
+      <div class="header-buttons">
+        <div class="action-dropdown">
+          <button class="action"><i class="fas fa-ellipsis-v"></i></button>
+          <div class="dropdown-content">
+            <button onclick="openModal()"><i class="fas fa-plus"></i> Add Student</button>
+            <button onclick="exportStudents()"><i class="fas fa-file-export"></i> Export</button>
+            <button onclick="backupDatabase()"><i class="fas fa-database"></i> Backup</button>
+            <button onclick="document.getElementById('restoreFile').click()"><i class="fas fa-upload"></i> Restore</button>
+            <button onclick="deleteAllStudents()"><i class="fas fa-trash"></i> Delete All</button>
+          </div>
+        </div>
+        <input type="file" id="restoreFile" accept=".xlsx" style="display:none" onchange="restoreDatabase(event)">
+      </div>
+    </div>
+    <div class="card">
+      <input type="text" id="studentSearch" placeholder="Search students..." oninput="loadStudents(this.value)" style="margin-bottom:15px;">
+      <div class="table-wrapper">
+        <table>
+          <thead><tr><th>Student #</th><th>Name</th><th>Course</th><th>Actions</th></tr></thead>
+          <tbody id="studentTable"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- VISIT LOG -->
+  <div id="visitlog" class="tab">
+    <div class="header" style="align-items: center; gap: 10px; margin-bottom:15px;">
+      <h2 style="display:flex; align-items:center; gap:8px;"><i class="fas fa-history" style="color:#8e44ad;"></i> Visit Log</h2>
+      <button class="action secondary" style="display:flex; align-items:center; gap:6px;" onclick="exportVisits()"><i class="fas fa-file-export"></i> Export to Excel</button>
+    </div>
+    <div class="card">
+      <input type="text" id="visitSearch" placeholder="Search visits..." oninput="loadVisits(this.value)" style="margin-bottom:20px; width:100%; max-width:400px;">
+      <div class="table-wrapper">
+        <table>
+          <thead><tr><th>Student #</th><th>Name</th><th>Course</th><th>Date & Time</th></tr></thead>
+          <tbody id="visitTable"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- REPORTS -->
+  <div id="reports" class="tab">
+    <div class="header" style="justify-content: space-between; align-items:center; margin-bottom:20px;">
+      <h2 style="display:flex; align-items:center; gap:8px;"><i class="fas fa-chart-pie" style="color:#8e44ad;"></i> Reports</h2>
+      <button class="action secondary" onclick="exportAnalytics()"><i class="fas fa-file-export"></i> Export Analytics</button>
+    </div>
+    <div class="grid">
+      <div class="stat total-students"><i class="fas fa-user-graduate"></i><h3>Total Students</h3><p id="totalStudents">0</p></div>
+      <div class="stat total-visits"><i class="fas fa-users"></i><h3>Total Visits</h3><p id="totalVisits">0</p></div>
+      <div class="stat peak-month"><i class="fas fa-chart-line"></i><h3>Peak Month</h3><p id="peakMonth">---</p></div>
+      <div class="stat top-student"><i class="fas fa-user"></i><h3>Top Student</h3><p id="topStudent">---</p></div>
+      <div class="stat top-course-visits"><i class="fas fa-book-reader"></i><h3>Top Course Visits</h3><p id="topCourseVisits">---</p></div>
+    </div>
+  </div>
+</div>
+
+<!-- ADD STUDENT MODAL -->
+<div id="modal" class="modal">
+  <div class="modal-content">
+    <h3>Add Student</h3>
+    <input id="newNumber" placeholder="Student Number">
+    <input id="newName" placeholder="Full Name">
+    <input id="newCourse" placeholder="Course">
+    <div class="modal-buttons">
+      <button class="action" onclick="addStudent()"><i class="fas fa-save"></i> Save</button>
+      <button class="secondary" onclick="closeModal()"><i class="fas fa-times"></i> Cancel</button>
+    </div>
+  </div>
+</div>
+
+<!-- EDIT STUDENT MODAL -->
+<div id="editModal" class="modal">
+  <div class="modal-content">
+    <h3>Edit Student</h3>
+    <input id="editNumber" placeholder="Student Number" disabled>
+    <input id="editName" placeholder="Full Name">
+    <input id="editCourse" placeholder="Course">
+    <div class="modal-buttons">
+      <button class="action" onclick="updateStudent()"><i class="fas fa-save"></i> Update</button>
+      <button class="secondary" onclick="closeEditModal()"><i class="fas fa-times"></i> Cancel</button>
+    </div>
+  </div>
+</div>
+
+<!-- DELETE MODAL -->
+<div id="deleteModal" class="modal">
+  <div class="modal-content">
+    <h3>Delete this student?</h3>
+    <div class="modal-buttons">
+      <button class="secondary" id="cancelDelete"><i class="fas fa-times"></i> Cancel</button>
+      <button class="action" id="confirmDelete"><i class="fas fa-trash"></i> YES</button>
+    </div>
+  </div>
+</div>
+
+<script>
+/* AUTH CHECK */
+if(localStorage.getItem("adminLoggedIn")!=="true"){ window.location.href="admin-login.html"; }
+
+const API='http://localhost:5000';
+let lastVisitId=null;
+let studentToDelete=null;
+let editingStudentNumber=null;
+
+/* TAB FUNCTION */
+function openTab(id){
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  document.querySelectorAll('.sidebar button').forEach(b=>b.classList.remove('active'));
+  if(id==='checkin') document.querySelector('.sidebar button:nth-of-type(1)').classList.add('active');
+  if(id==='students') document.querySelector('.sidebar button:nth-of-type(2)').classList.add('active');
+  if(id==='visitlog') document.querySelector('.sidebar button:nth-of-type(3)').classList.add('active');
+  if(id==='reports') document.querySelector('.sidebar button:nth-of-type(4)').classList.add('active');
+}
+
+/* MODALS */
+function openModal(){ document.getElementById('modal').style.display='flex'; }
+function closeModal(){ document.getElementById('modal').style.display='none'; }
+function openEditModal(number,name,course){
+  editingStudentNumber = number;
+  document.getElementById('editNumber').value = number;
+  document.getElementById('editName').value = name;
+  document.getElementById('editCourse').value = course;
+  document.getElementById('editModal').style.display = 'flex';
+}
+function closeEditModal(){ editingStudentNumber=null; document.getElementById('editModal').style.display='none'; }
+
+/* STUDENTS */
+async function loadStudents(search=''){
+  const res = await fetch(`${API}/students`);
+  const data = await res.json();
+
+  //Filter first (for search)
+  const filtered = data.filter(s =>
+    s.student_number.includes(search) ||
+    s.full_name.toLowerCase().includes(search.toLowerCase()) ||
+    s.course.toLowerCase().includes(search.toLowerCase())
+  );
+
+  //Sort alphabetically by full_name
+  filtered.sort((a, b) => a.full_name.localeCompare(b.full_name));
+
+  studentTable.innerHTML = filtered.map(s => `
+    <tr>
+      <td>${s.student_number}</td>
+      <td>${s.full_name}</td>
+      <td>${s.course}</td>
+      <td><button onclick="confirmDelete('${s.student_number}')">Delete</button></td>
+    </tr>
+  `).join('');
+
+  totalStudents.innerText = data.length;
+}
+
+
+async function addStudent(){
+  await fetch(`${API}/student`,{ method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({student_number:newNumber.value,full_name:newName.value,course:newCourse.value}) });
+  closeModal();
+  loadStudents();
+}
+
+async function updateStudent(){
+  if(!editingStudentNumber) return;
+  const updatedName = document.getElementById('editName').value;
+  const updatedCourse = document.getElementById('editCourse').value;
+  try{
+    await fetch(`${API}/student/${editingStudentNumber}`, {
+      method: 'PUT',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ full_name: updatedName, course: updatedCourse })
+    });
+    closeEditModal();
+    loadStudents();
+    alert("Student updated successfully!");
+  }catch(err){ console.error(err); alert("Failed to update student."); }
+}
+
+function confirmDelete(id){ studentToDelete=id; document.getElementById('deleteModal').style.display='flex'; }
+document.getElementById('cancelDelete').onclick = ()=>{ studentToDelete=null; document.getElementById('deleteModal').style.display='none'; }
+document.getElementById('confirmDelete').onclick = async ()=>{ if(studentToDelete){ await fetch(`${API}/student/${studentToDelete}`,{ method:'DELETE' }); studentToDelete=null; document.getElementById('deleteModal').style.display='none'; loadStudents(); } }
+
+/* VISITS */
+async function loadVisits(search=''){
+  const res=await fetch(`${API}/visits?search=${search}`);
+  const data=await res.json();
+  let html=''; data.forEach((v,idx)=>{ const highlightClass=(idx===0 && v.id!==lastVisitId)?'new-entry':''; html+=`<tr class="${highlightClass}"><td>${v.student_number}</td><td>${v.full_name}</td><td>${v.course}</td><td>${new Date(v.visit_time).toLocaleString()}</td></tr>`; });
+  if(data.length) lastVisitId=data[0].id;
+  visitTable.innerHTML=html; recentVisits.innerHTML=html;
+}
+
+/* REPORTS */
+async function loadReports(){
+  try{
+    const res=await fetch(`${API}/reports`); const data=await res.json();
+    totalStudents.innerText=data.total_students;
+    totalVisits.innerText=data.total_visits;
+    if(data.peak_month && data.peak_month!=="N/A"){ const [year,month]=data.peak_month.split('-'); peakMonth.innerText=new Date(year,month-1).toLocaleString('default',{month:'long', year:'numeric'}); } else { peakMonth.innerText="N/A"; }
+    const visitsRes=await fetch(`${API}/visits`); const visits=await visitsRes.json();
+    const studentCount={}; visits.forEach(v=>studentCount[v.full_name]=(studentCount[v.full_name]||0)+1);
+    const topStudentName=Object.keys(studentCount).reduce((a,b)=>studentCount[a]>studentCount[b]?a:b,"N/A");
+    topStudent.innerText=topStudentName;
+    const courseCount={}; visits.forEach(v=>courseCount[v.course]=(courseCount[v.course]||0)+1);
+    const topCourseVisitsName=Object.keys(courseCount).reduce((a,b)=>courseCount[a]>courseCount[b]?a:b,"N/A");
+    topCourseVisits.innerText=topCourseVisitsName;
+  }catch(err){ console.error(err); }
+}
+
+/* EXPORT FUNCTIONS */
+async function exportStudents(){ 
+  const res = await fetch(`${API}/students`);
+  const data = await res.json();
+  const ws = XLSX.utils.json_to_sheet(data, { header: ["student_number","full_name","course"] });
+  XLSX.utils.sheet_add_aoa(ws, [["Student Number","Full Name","Course"]], { origin: "A1" });
+  ws["!autofilter"] = { ref: "A1:C1" };
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, "Students");
+  XLSX.writeFile(wb, "students.xlsx");
+}
+
+async function exportVisits(){ 
+  const res = await fetch(`${API}/visits`);
+  const data = await res.json();
+  const ws = XLSX.utils.json_to_sheet(data, { header: ["student_number","full_name","course","visit_time"] });
+  XLSX.utils.sheet_add_aoa(ws, [["Student Number","Full Name","Course","Date & Time"]], { origin: "A1" });
+  ws["!autofilter"] = { ref: "A1:D1" };
+  data.forEach((v, i) => { ws[`D${i+2}`].v = new Date(v.visit_time).toLocaleString(); });
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, "Visits");
+  XLSX.writeFile(wb, "visits.xlsx");
+}
+
+/* BACKUP / RESTORE */
+async function backupDatabase(){ }
+async function restoreDatabase(event){ }
+
+/* DELETE ALL */
+async function deleteAllStudents(){ }
+
+/* AUTO REFRESH */
+setInterval(()=>{ loadVisits(); loadReports(); },10000);
+loadStudents(); loadVisits(); loadReports();
+
+/* LOGOUT */
+function logout(){ localStorage.removeItem("adminLoggedIn"); window.location.href="admin-login.html"; }
+</script>
+</body>
+</html>
