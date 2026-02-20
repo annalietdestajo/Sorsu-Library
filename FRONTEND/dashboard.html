@@ -702,18 +702,14 @@ function showNotification(message, type="info", duration=2500){
   notif.style.opacity = "0";
   notif.style.transition = "all 0.4s ease";
 
-  // colors based on type
+  
   if(type==="success") notif.style.background = "#27ae60";
   else if(type==="error") notif.style.background = "#c0392b";
   else if(type==="warning") notif.style.background = "#f39c12";
   else notif.style.background = "#2980b9";
 
   container.appendChild(notif);
-
-  // fade in
   requestAnimationFrame(()=>{ notif.style.opacity = "1"; });
-
-  // auto remove
   setTimeout(()=>{
     notif.style.opacity = "0";
     notif.addEventListener("transitionend", ()=>notif.remove());
