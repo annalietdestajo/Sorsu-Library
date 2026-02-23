@@ -366,7 +366,9 @@ button.secondary:hover { opacity: 0.9; transform: translateY(-2px);}
 </body>
 
 <script>
-if(localStorage.getItem("adminLoggedIn")!=="true"){ window.location.href="admin-login.html"; }
+  if(localStorage.getItem("adminLoggedIn")!=="true"){ 
+    window.location.href="admin-login.html"; 
+}
 const API='http://localhost:5000';
 let lastVisitId=null, studentToDelete=null, editingStudentNumber=null;
 
@@ -720,7 +722,11 @@ function showNotification(message, type="info", duration=2500){
 function logout(){ localStorage.removeItem("adminLoggedIn"); window.location.href="admin-login.html"; }
 
 // --- AUTO REFRESH ---
-setInterval(()=>{ loadVisits(); loadReports(); loadStudents(); },10000);
+setInterval(() => { 
+  loadVisits(); 
+  loadReports(); 
+  loadStudents(); 
+}, 10000);
 
 // INITIAL LOAD
 loadStudents(); loadVisits(); loadReports();
