@@ -19,7 +19,7 @@
 
   /* LOGIN BOX */
   .login-box {
-    background: black; /* TRANSPARENT BOX */
+    background: white; 
     width: 400px;
     padding: 40px 30px;
     border-radius: 12px;
@@ -41,7 +41,7 @@
 
   /* TITLE */
   .login-box h2 {
-    color: #fff;
+    color: black;
     margin-bottom: 25px;
     font-weight: 700;
   }
@@ -56,25 +56,25 @@
     top: 50%;
     left: 12px;
     transform: translateY(-50%);
-    color: #fff;
+    color: black;
     font-size: 16px;
   }
   .input-group input {
     width: 100%;
     padding: 14px 14px 14px 38px;
     border-radius: 8px;
-    border: 1px solid #fff;
+    border: 1px solid black;
     font-size: 16px;
     background: rgba(255,255,255,0.2);
-    color: #fff;
+    color: black;
     transition: all 0.3s ease;
   }
   .input-group input::placeholder {
-    color: #fff;
+    color: black;
     opacity: 0.8;
   }
   .input-group input:focus {
-    border-color: #fff;
+    border-color:black;
     box-shadow: 0 0 8px rgba(255,255,255,0.4);
     outline: none;
   }
@@ -83,8 +83,8 @@
   .login-box button {
     width: 100%;
     padding: 14px;
-    background: #fff;
-    color: black;
+    background: black;
+    color: white;
     border: none;
     border-radius: 8px;
     cursor: pointer;
@@ -93,7 +93,7 @@
     transition: all 0.3s ease;
   }
   .login-box button:hover {
-    background: #f1f1f1;
+    background: maroon;
     transform: translateY(-2px);
   }
 
@@ -128,23 +128,39 @@
 </div>
 
 <script>
+// --- AUTO-LOGIN: Redirect kung naka-login na ---
+window.onload = () => {
+ 
+  if(localStorage.getItem("adminLoggedIn") === "true" && window.location.pathname.includes("admin-login.html")){
+      
+      window.location.replace("./dashboard.html");
+  }
+};
+
+// --- LOGIN FUNCTION ---
 async function login(){
-  const res = await fetch("http://localhost:5000/admin/login",{
-    method:"POST",
-    headers:{ "Content-Type":"application/json" },
-    body:JSON.stringify({
-      username: document.getElementById("username").value,
-      password: document.getElementById("password").value
-    })
-  });
+  try {
+    const res = await fetch("http://localhost:5000/admin/login",{
+      method:"POST",
+      headers:{ "Content-Type":"application/json" },
+      body:JSON.stringify({
+        username: document.getElementById("username").value,
+        password: document.getElementById("password").value
+      })
+    });
 
-  const data = await res.json();
+    const data = await res.json();
 
-  if(data.success){
-    localStorage.setItem("adminLoggedIn","true");
-    window.location.href="dashboard.html";
-  }else{
-    document.getElementById("error").innerText="Invalid Admin Login";
+    if(data.success){
+      localStorage.setItem("adminLoggedIn","true");
+      window.location.replace("dashboard.html"); // safe redirect
+    } else {
+      document.getElementById("error").innerText="Invalid Admin Login";
+    }
+
+  } catch(err){
+    console.error(err);
+    document.getElementById("error").innerText="Server not reachable";
   }
 }
 </script>
