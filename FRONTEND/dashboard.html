@@ -6,6 +6,7 @@
 <title>Library Dashboard</title>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 <script src="https://cdn.sheetjs.com/xlsx-latest/package/dist/xlsx.full.min.js"></script>
+
 <style>
 * { box-sizing: border-box; margin: 0; font-family: Verdana, Geneva, Tahoma, sans-serif; }
 body { display: flex; background: #800000; color: #fff; transition: background 0.3s ease; height: 100vh; }
@@ -48,7 +49,7 @@ body { display: flex; background: #800000; color: #fff; transition: background 0
 /* CARDS */
 .card { background: #fff; border-radius: 12px; padding: 20px; margin-bottom: 30px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); }
 .card table { width: 100%; border-collapse: collapse; border-radius: 12px; overflow: hidden; background: #fff; }
-.table-wrapper { max-height: 400px; overflow-y: auto; overflow-x: auto; border-radius: 12px; background: #fff; }
+.table-wrapper { max-height: 400px; overflow-y: auto; overflow-x: auto; border-radius: 12px; background: #fff;}
 .table-wrapper table { width: 100%; min-width: 600px; border-collapse: collapse; }
 .table-wrapper table th, .table-wrapper table td { padding: 12px; border-bottom: 1px solid blue; text-align: left; transition: background 0.3s ease, transform 0.2s ease; }
 .table-wrapper table th { background: blue; color: #fff; font-weight: 600; position: center; top: 0; z-index: 2; }
@@ -540,27 +541,34 @@ async function loadReports(){
   }
 }
 
-// --- EXPORT ---
+// --- EXPORT STUDENTS ---
 async function exportStudents(){
   const res = await fetch(`${API}/students`);
-  const data = await res.json();
-  const ws = XLSX.utils.json_to_sheet(data, { header:["student_number","full_name","course"] });
-  XLSX.utils.sheet_add_aoa(ws,[["Student Number","Full Name","Course"]],{origin:"A1"});
-  ws["!autofilter"]={ ref:"A1:C1" };
-  const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, "Students");
-  XLSX.writeFile(wb, "students.xlsx");
+  let data = await res.json();
+
+  data = data.filter(s => (s.student_number||'').trim() !== '' );
+
+  data.sort((a,b) => a.full_name.localeCompare(b.full_name));
+
+  const ws = XLSX.utils.json_to_sheet([], { header:["student_number","full_name","course"] });
+  
+  XLSX.utils.sheet_add_json(ws, data, { skipHeader:true, origin:1 });
+  XLSX.utils.sheet_add_aoa(ws, [["Student Number","Full Name","Course"]], {origin:"A1"});
+
+  ws["!autofilter"] = { ref:"A1:C1" };
+
+  ws["!cols"] = [
+    { wch: 20 },
+    { wch: 30 }, 
+    { wch: 15 }  
+  ];
+
+  // --- Create workbook and download ---
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, "Students");
+  XLSX.writeFile(wb, `students_${new Date().toISOString().slice(0,10)}.xlsx`);
+
   showNotification("Students exported successfully!", "success");
-}
-async function exportVisits(){
-  const res = await fetch(`${API}/visits`);
-  const data = await res.json();
-  const ws = XLSX.utils.json_to_sheet(data, { header:["student_number","full_name","course","visit_time"] });
-  XLSX.utils.sheet_add_aoa(ws,[["Student Number","Full Name","Course","Date & Time"]],{origin:"A1"});
-  ws["!autofilter"]={ ref:"A1:D1" };
-  data.forEach((v,i)=>{ ws[`D${i+2}`].v = new Date(v.visit_time).toLocaleString(); });
-  const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, "Visits");
-  XLSX.writeFile(wb, "visits.xlsx");
-  showNotification("Visits exported successfully!", "success");
 }
 // --- EXPORT ANALYTICS ---
 async function exportAnalytics(){
