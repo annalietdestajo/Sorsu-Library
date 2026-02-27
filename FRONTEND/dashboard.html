@@ -238,7 +238,6 @@ button.secondary:hover { opacity: 0.9; transform: translateY(-2px);}
   </div>
 
   <div class="main">
-  <!-- CHECK-IN -->
     <div id="checkin" class="tab active">
       <div class="card">
           <h3>Recent Visits</h3>
@@ -262,7 +261,6 @@ button.secondary:hover { opacity: 0.9; transform: translateY(-2px);}
           </button>
           <div class="dropdown-content" id="dropdownMenu">
             <button onclick="openModal()"><i class="fas fa-plus"></i> Add Student</button>
-            <button onclick="exportStudents()"><i class="fas fa-file-export"></i> Export</button>
             <button onclick="backupDatabase()"><i class="fas fa-database"></i> Backup</button>
             <button onclick="document.getElementById('restoreFile').click()"><i class="fas fa-upload"></i> Restore</button>
             <button onclick="deleteAllStudents()"><i class="fas fa-trash"></i> Delete All</button>
@@ -286,7 +284,6 @@ button.secondary:hover { opacity: 0.9; transform: translateY(-2px);}
   <div id="visitlog" class="tab">
     <div class="header" style="align-items: center; gap: 10px; margin-bottom:15px;">
       <h2 style="display:flex; align-items:center; gap:8px;"><i class="fas fa-history" style="color:black"></i> Visit Log</h2>
-      <button class="action secondary" style="display:flex; align-items:center; gap:6px;" onclick="exportVisits()"><i class="fas fa-file-export"></i> Export to Excel</button>
     </div>
     <div class="card">
       <input type="text" id="visitSearch" placeholder="Search visits..." oninput="loadVisits(this.value)" style="margin-bottom:20px; width:100%; max-width:400px;">
@@ -319,9 +316,11 @@ button.secondary:hover { opacity: 0.9; transform: translateY(-2px);}
   <div id="modal" class="modal">
     <div class="modal-content">
       <h3>Add Student</h3>
-        <input id="newNumber" placeholder="Student Number">
-        <input id="newName" placeholder="Full Name">
-        <input id="newCourse" placeholder="Course">
+      <input id="newNumber" placeholder="Student Number" required>
+      <input id="newLast" placeholder="Last Name" required>
+      <input id="newFirst" placeholder="First Name" required>
+      <input id="newMiddle" placeholder="Middle Name" required>
+      <input id="newCourse" placeholder="Course" required>
         <div class="modal-buttons">
           <button class="action" onclick="addStudent()"><i class="fas fa-save"></i> Save</button>
           <button class="secondary" onclick="closeModal()"><i class="fas fa-times"></i> Cancel</button>
@@ -329,18 +328,19 @@ button.secondary:hover { opacity: 0.9; transform: translateY(-2px);}
     </div>
   </div>
 
-  <div id="editModal" class="modal">
-    <div class="modal-content">
-      <h3>Edit Student</h3>
-      <input id="editNumber" placeholder="Student Number" disabled>
-      <input id="editName" placeholder="Full Name">
-      <input id="editCourse" placeholder="Course">
-      <div class="modal-buttons">
-        <button class="action" onclick="updateStudent()"><i class="fas fa-save"></i> Update</button>
-        <button class="secondary" onclick="closeEditModal()"><i class="fas fa-times"></i> Cancel</button>
-      </div>
+  <!-- EDIT MODAL -->
+<div id="editModal" class="modal">
+  <div class="modal-content">
+    <h3>Edit Student</h3>
+    <input id="editNumber" placeholder="Student Number"> 
+    <input id="editName" placeholder="Full Name">
+    <input id="editCourse" placeholder="Course">
+    <div class="modal-buttons">
+      <button class="action" onclick="updateStudent()"><i class="fas fa-save"></i> Update</button>
+      <button class="secondary" onclick="closeEditModal()"><i class="fas fa-times"></i> Cancel</button>
     </div>
   </div>
+</div>
 
   <div id="deleteModal" class="modal">
     <div class="modal-content">
@@ -396,59 +396,81 @@ function openEditModal(number,name,course){
 function closeEditModal(){ editingStudentNumber=null; document.getElementById('editModal').style.display='none'; }
 
 // --- STUDENTS ---
+function splitName(fullName){
+  const parts = fullName.trim().split(' ');
+  if(parts.length === 2){
+    return { last: parts[0], first: parts[1], middle: '' };  // Last First
+  } else if(parts.length > 2){
+    return { last: parts[0], first: parts[1], middle: parts.slice(2).join(' ') };
+  } else {
+    return { last: '', first: fullName, middle: '' };
+  }
+}
+
 async function loadStudents(search=''){
   const res = await fetch(`${API}/students`);
   const data = await res.json();
-  const filtered = data
-  .filter(s =>
-    (s.student_number || '').trim() !== '' || 
-    (s.full_name || '').trim() !== '' || 
-    (s.course || '').trim() !== ''
-  ) // remove completely blank rows
-  .filter(s =>
-    (s.student_number || '').includes(search) ||
-    (s.full_name || '').toLowerCase().includes(search.toLowerCase()) ||
-    (s.course || '').toLowerCase().includes(search.toLowerCase())
-  );
 
-  filtered.sort((a,b)=>a.full_name.localeCompare(b.full_name));
+  const filtered = data
+    .filter(s => (s.student_number||'').trim() !== '')
+    .filter(s =>
+      (s.student_number||'').includes(search) ||
+      (s.full_name||'').toLowerCase().includes(search.toLowerCase()) ||
+      (s.course||'').toLowerCase().includes(search.toLowerCase())
+    );
+
+    filtered.sort((a,b)=>{
+      const na = splitName(a.full_name || '');
+      const nb = splitName(b.full_name || '');
+      return `${na.last} ${na.first} ${na.middle}`
+        .localeCompare(`${nb.last} ${nb.first} ${nb.middle}`);
+    });
 
   studentTable.innerHTML = filtered.map(s => {
-    const number = s.student_number || '';
-    const name = s.full_name || '';
-    const course = s.course || '';
-  
+    const number = (s.student_number || '').toUpperCase();
+    const { last, first, middle } = splitName(s.full_name || '');
+    const course = (s.course || '').toUpperCase();
+
     return `<tr>
       <td>${number}</td>
-      <td>${name}</td>
+      <td>${last.toUpperCase()}, ${first.toUpperCase()} ${middle.toUpperCase()}</td>
       <td>${course}</td>
       <td style="display:flex; gap:5px;">
-        <button class="edit" onclick="openEditModal('${number.replace(/'/g,"\\'")}','${name.replace(/'/g,"\\'")}','${course.replace(/'/g,"\\'")}')"><i class="fas fa-edit"></i></button>
-        <button class="delete" onclick="confirmDelete('${number.replace(/'/g,"\\'")}')"><i class="fas fa-trash"></i></button>
+        <button class="edit" onclick="openEditModal(
+          '${number.replace(/'/g,"\\'")}',
+          '${s.full_name.replace(/'/g,"\\'")}',
+          '${course.replace(/'/g,"\\'")}'
+        )"><i class="fas fa-edit"></i></button>
+        <button class="delete" onclick="confirmDelete('${number.replace(/'/g,"\\'")}')">
+          <i class="fas fa-trash"></i>
+        </button>
       </td>
     </tr>`;
   }).join('');
-  
 }
 
 async function addStudent(){
-  await fetch(`${API}/student`,{
-    method:'POST', headers:{'Content-Type':'application/json'},
-    body:JSON.stringify({student_number:newNumber.value, full_name:newName.value, course:newCourse.value})
-  });
-  closeModal(); loadStudents();
-}
+  const last = document.getElementById('newLast').value.trim();
+  const first = document.getElementById('newFirst').value.trim();
+  const middle = document.getElementById('newMiddle').value.trim();
+  const number = document.getElementById('newNumber').value.trim();
+  const course = document.getElementById('newCourse').value.trim();
 
-async function updateStudent(){
-  if(!editingStudentNumber) return;
-  const updatedName = document.getElementById('editName').value;
-  const updatedCourse = document.getElementById('editCourse').value;
-  await fetch(`${API}/student/${editingStudentNumber}`,{
-    method:'PUT',
+  if(!last || !first || !number) {
+    showNotification("Student Number, Last Name, and First Name are required!", "error");
+    return;
+  }
+
+  const full_name = `${first} ${middle} ${last}`.trim();
+
+  await fetch(`${API}/student`, {
+    method:'POST',
     headers:{'Content-Type':'application/json'},
-    body:JSON.stringify({full_name:updatedName, course:updatedCourse})
+    body:JSON.stringify({student_number:number, full_name, course})
   });
-  closeEditModal(); loadStudents();
+
+  closeModal(); 
+  loadStudents();
 }
 
 // --- DELETE ---
@@ -464,42 +486,65 @@ document.getElementById('confirmDelete').onclick = async ()=>{
 }
 
 // --- VISITS ---
-async function loadVisits(search='') {
+async function loadVisits(search=''){
   const res = await fetch(`${API}/visits`);
   const data = await res.json();
 
-  // Filter data based on search (case-insensitive)
-  const filteredData = data.filter(v => 
+  const filtered = data.filter(v =>
     v.student_number.toLowerCase().includes(search.toLowerCase()) ||
     v.full_name.toLowerCase().includes(search.toLowerCase()) ||
     v.course.toLowerCase().includes(search.toLowerCase())
   );
 
-  // Keep only the latest visit per student
   const uniqueMap = new Map();
-  filteredData.forEach(v => {
-    if(!uniqueMap.has(v.student_number) || new Date(v.visit_time) > new Date(uniqueMap.get(v.student_number).visit_time)){
+  filtered.forEach(v=>{
+    if(!uniqueMap.has(v.student_number) ||
+       new Date(v.visit_time) > new Date(uniqueMap.get(v.student_number).visit_time)){
       uniqueMap.set(v.student_number, v);
     }
   });
 
-  const uniqueData = Array.from(uniqueMap.values()).sort((a,b) => new Date(b.visit_time) - new Date(a.visit_time));
+  const uniqueData = Array.from(uniqueMap.values());
 
-  // Generate table rows
-  let html = '';
-  uniqueData.forEach((v, idx) => {
-    const highlightClass = (idx===0 && v.id!==lastVisitId) ? 'new-entry' : '';
-    html += `<tr class="${highlightClass}">
-      <td>${v.student_number}</td>
-      <td>${v.full_name}</td>
-      <td>${v.course}</td>
-      <td>${new Date(v.visit_time).toLocaleString()}</td>
-    </tr>`;
+  // ================================
+  // ✅ VISIT LOG → ALPHABETICAL
+  // ================================
+  const visitLogSorted = [...uniqueData].sort((a,b)=>{
+    const na = splitName(a.full_name || '');
+    const nb = splitName(b.full_name || '');
+    return `${na.last} ${na.first} ${na.middle}`
+      .localeCompare(`${nb.last} ${nb.first} ${nb.middle}`);
   });
 
-  if(uniqueData.length) lastVisitId = uniqueData[0].id;
-  visitTable.innerHTML = html;
-  recentVisits.innerHTML = html;
+ 
+  const checkInSorted = [...uniqueData]
+    .sort((a,b)=>new Date(b.visit_time)-new Date(a.visit_time));
+
+  // -------- VISIT LOG TABLE --------
+  visitTable.innerHTML = visitLogSorted.map(v=>{
+    const { last, first, middle } = splitName(v.full_name || '');
+    return `<tr>
+      <td>${v.student_number.toUpperCase()}</td>
+      <td>${last.toUpperCase()}, ${first.toUpperCase()} ${middle.toUpperCase()}</td>
+      <td>${v.course.toUpperCase()}</td>
+      <td>${new Date(v.visit_time).toLocaleString()}</td>
+    </tr>`;
+  }).join('');
+
+  // -------- CHECK-IN TABLE --------
+  recentVisits.innerHTML = checkInSorted.map((v,idx)=>{
+    const { last, first, middle } = splitName(v.full_name || '');
+    const highlight = (idx===0 && v.id!==lastVisitId) ? 'new-entry' : '';
+
+    return `<tr class="${highlight}">
+      <td>${v.student_number.toUpperCase()}</td>
+      <td>${last.toUpperCase()}, ${first.toUpperCase()} ${middle.toUpperCase()}</td>
+      <td>${v.course.toUpperCase()}</td>
+      <td>${new Date(v.visit_time).toLocaleString()}</td>
+    </tr>`;
+  }).join('');
+
+  if(checkInSorted.length) lastVisitId = checkInSorted[0].id;
 }
 
 // --- REPORTS ---

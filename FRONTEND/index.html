@@ -78,13 +78,14 @@ button:hover{ background:#8e1b2c; }
   <div class="error" id="checkinError"></div>
 
   <input type="text" id="studentNumber" placeholder="Enter Student Number">
-  <button onclick="checkIn()">CHECK-IN</button>
+  <button id="checkInBtn" onclick="checkIn()">CHECK-IN</button>
 
   <button class="register-btn" id="registerButton" onclick="showRegisterCard()">Register Student</button>
 
   <div class="register-card" id="registerCard">
-    <input id="regNumber" readonly>
-    <input id="regName" placeholder="Full Name">
+    <input id="regNumber" readonly placeholder="Student Number">
+    <input id="regLast" placeholder="Last Name">
+    <input id="regFirst" placeholder="First Name">
     <input id="regCourse" placeholder="Course">
     <button onclick="registerStudent()">Register & Check-In</button>
   </div>
@@ -92,15 +93,16 @@ button:hover{ background:#8e1b2c; }
 
 <script>
 const API='http://localhost:5000';
-const input=document.getElementById('studentNumber');
-const card=document.getElementById('card');
-const registerCard=document.getElementById('registerCard');
-const registerButton=document.getElementById('registerButton');
-const checkinSuccess=document.getElementById('checkinSuccess');
-const checkinError=document.getElementById('checkinError');
-const regNumber=document.getElementById('regNumber');
-const regName=document.getElementById('regName');
-const regCourse=document.getElementById('regCourse');
+const input = document.getElementById('studentNumber');
+const checkInBtn = document.getElementById('checkInBtn');
+const registerCard = document.getElementById('registerCard');
+const registerButton = document.getElementById('registerButton');
+const checkinSuccess = document.getElementById('checkinSuccess');
+const checkinError = document.getElementById('checkinError');
+const regNumber = document.getElementById('regNumber');
+const regLast = document.getElementById('regLast');
+const regFirst = document.getElementById('regFirst');
+const regCourse = document.getElementById('regCourse');
 
 let studentsList = [];
 let visitsList = [];
@@ -110,7 +112,7 @@ function focusMain(){
   if(registerCard.style.display!=='block'){
     input.focus();
   } else {
-    regName.focus();
+    regLast.focus(); // Last Name first
   }
 }
 
@@ -151,80 +153,88 @@ async function fetchData(){
 
 /* CHECK-IN FUNCTION */
 async function checkIn(){
-  const sn=input.value.trim();
-  if(!sn) return showMessage('checkinError','Please Enter Student Number',false);
+  const sn = input.value.trim();
+  if(!sn) return showMessage('checkinError','Please Enter Student Number', false);
 
   await fetchData();
 
-  // check if student exists
-  const student=studentsList.find(s=>s.student_number===sn);
+  const student = studentsList.find(s => s.student_number === sn);
 
-  // check if student already checked in today
-  const hasVisited=visitsList.some(v=>v.student_number===sn && new Date(v.visit_time).toDateString()===new Date().toDateString());
-
-  if(student && !hasVisited){
+  if(student){
+    // Existing student → automatic check-in
     await fetch(`${API}/checkin`,{
       method:'POST',
       headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({student_number:sn})
+      body:JSON.stringify({student_number: sn})
     });
+
     flashSuccess();
-    showMessage('checkinSuccess',`Welcome ${student.full_name}`);
-    registerCard.style.display='none';
-    registerButton.style.display='none';
-  } else if(student && hasVisited){
-    showMessage('checkinError',`Student ${student.full_name} already checked in today`,false);
+    showMessage('checkinSuccess', `Welcome ${student.full_name}`);
+
+    registerCard.style.display = 'none';
+    registerButton.style.display = 'none';
+    checkInBtn.style.display = 'block';
+    input.style.display = 'block';
+
   } else {
-    // new student, show registration if not already registered
-    if(!studentsList.some(s=>s.student_number===sn)){
-      registerButton.style.display='block';
-      regNumber.value=sn;
-    } else {
-      showMessage('checkinError','This student already exists.',false);
-    }
+    // New student → show registration form directly
+    registerCard.style.display = 'block';
+    registerButton.style.display = 'none';
+
+    // hide student number input & check-in button
+    input.style.display = 'none';
+    checkInBtn.style.display = 'none';
+
+    regNumber.value = sn;
+    regLast.focus(); // LAST NAME first
   }
 
-  input.value='';
-  focusMain();
+  input.value = '';
 }
+ 
 
 async function registerStudent(){
   const sn = regNumber.value.trim();
-  const name = regName.value.trim();
+  const last = regLast.value.trim();
+  const first = regFirst.value.trim();
   const course = regCourse.value.trim();
 
-  // Check all fields filled
-  if(!name || !course) return showMessage('checkinError','Fill all fields',false);
+  // Validate all fields
+  if(!last || !first || !course)
+    return showMessage('checkinError','Fill all fields', false);
 
-  // Check if full name has at least two words
-  if(name.split(/\s+/).length < 2){
-    return showMessage('checkinError','Please enter full name (first and last name).', false);
-  }
+  const fullName = `${last} ${first}`;
 
-  // Save student
-  await fetch(`${API}/student`,{
+  // Register student
+  await fetch(`${API}/student`, {
     method:'POST',
     headers:{'Content-Type':'application/json'},
-    body:JSON.stringify({student_number:sn, full_name:name, course:course})
+    body:JSON.stringify({student_number: sn, full_name: fullName, course: course})
   });
 
-  // Check-in immediately
-  await fetch(`${API}/checkin`,{
+  // Automatic check-in
+  await fetch(`${API}/checkin`, {
     method:'POST',
     headers:{'Content-Type':'application/json'},
-    body:JSON.stringify({student_number:sn})
+    body:JSON.stringify({student_number: sn})
   });
 
   flashSuccess();
-  showMessage('checkinSuccess',`Registered & Welcome ${name}`);
+  const displayName = fullName.split(' ').slice(0,2).join(' ');
+  showMessage('checkinSuccess', `Registered & Welcome ${displayName}`);
 
-  registerCard.style.display='none';
-  registerButton.style.display='none';
-  regName.value=''; regCourse.value='';
+  // Hide registration form, show input & button for next student
+  registerCard.style.display = 'none';
+  checkInBtn.style.display = 'block';
+  input.style.display = 'block';
 
-  focusMain();
+  // Clear registration fields
+  regLast.value = '';
+  regFirst.value = '';
+  regCourse.value = '';
+
+  input.focus();
 }
-
 /* AUTO REFRESH STUDENTS & VISITS EVERY 5 SECONDS */
 async function autoRefresh(){
   await fetchData();
