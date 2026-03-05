@@ -322,6 +322,9 @@ button.secondary:hover { opacity: 0.9; transform: translateY(-2px);}
       <input id="newMiddle" placeholder="Middle Name" required>
       <input id="newCourse" placeholder="Course" required>
         <div class="modal-buttons">
+          <button class="action" onclick="updateStudent()">
+            <i class="fas fa-save"></i> Update
+          </button>
           <button class="action" onclick="addStudent()"><i class="fas fa-save"></i> Save</button>
           <button class="secondary" onclick="closeModal()"><i class="fas fa-times"></i> Cancel</button>
         </div>
@@ -471,6 +474,43 @@ async function addStudent(){
 
   closeModal(); 
   loadStudents();
+}
+
+// --- UPDATE STUDENT ---
+async function updateStudent(){
+  const number = document.getElementById("editNumber").value.trim();
+  const full_name = document.getElementById("editName").value.trim();
+  const course = document.getElementById("editCourse").value.trim();
+
+  if(!number || !full_name){
+    showNotification("Student Number and Name are required!", "error");
+    return;
+  }
+
+  try{
+    const res = await fetch(`${API}/student/${editingStudentNumber}`,{
+      method:"PUT",
+      headers:{ "Content-Type":"application/json" },
+      body: JSON.stringify({
+        student_number: number,
+        full_name: full_name,
+        course: course
+      })
+    });
+
+    if(res.ok){
+      showNotification("Student updated successfully!", "success");
+      closeEditModal();
+      loadStudents();
+      loadReports();
+    }else{
+      showNotification("Update failed!", "error");
+    }
+
+  }catch(err){
+    console.error(err);
+    showNotification("Server error!", "error");
+  }
 }
 
 // --- DELETE ---

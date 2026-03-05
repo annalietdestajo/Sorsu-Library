@@ -128,42 +128,33 @@
 </div>
 
 <script>
-// --- AUTO-LOGIN: Redirect kung naka-login na ---
-window.onload = () => {
- 
-  if(localStorage.getItem("adminLoggedIn") === "true" && window.location.pathname.includes("admin-login.html")){
-      
-      window.location.replace("./dashboard.html");
-  }
-};
-
-// --- LOGIN FUNCTION ---
-async function login(){
-  try {
-    const res = await fetch("http://localhost:5000/admin/login",{
-      method:"POST",
-      headers:{ "Content-Type":"application/json" },
-      body:JSON.stringify({
-        username: document.getElementById("username").value,
-        password: document.getElementById("password").value
-      })
-    });
-
-    const data = await res.json();
-
-    if(data.success){
-      localStorage.setItem("adminLoggedIn","true");
-      window.location.replace("dashboard.html"); // safe redirect
-    } else {
-      document.getElementById("error").innerText="Invalid Admin Login";
+  // --- LOGIN FUNCTION ---
+  async function login(){
+    try {
+      const res = await fetch("http://localhost:5000/admin/login",{
+        method:"POST",
+        headers:{ "Content-Type":"application/json" },
+        body:JSON.stringify({
+          username: document.getElementById("username").value,
+          password: document.getElementById("password").value
+        })
+      });
+  
+      const data = await res.json();
+  
+      if(data.success){
+        localStorage.setItem("adminLoggedIn","true");
+        window.location.replace("dashboard.html");
+      } else {
+        document.getElementById("error").innerText="Invalid Admin Login";
+      }
+  
+    } catch(err){
+      console.error(err);
+      document.getElementById("error").innerText="Server not reachable";
     }
-
-  } catch(err){
-    console.error(err);
-    document.getElementById("error").innerText="Server not reachable";
   }
-}
-</script>
+  </script>
 
 </body>
 </html>
