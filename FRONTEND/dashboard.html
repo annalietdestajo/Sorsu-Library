@@ -53,7 +53,7 @@ body { display: flex; background: #800000; color: #fff; transition: background 0
 /* ACTUAL TABLE STYLE */
 .table-wrapper {
   max-height: 400px;
-  overflow-y: auto; /* scrollbar always shows on content overflow */
+  overflow-y: auto; 
   overflow-x: auto;
   border-radius: 12px;
   background: #fff;
@@ -95,7 +95,7 @@ body { display: flex; background: #800000; color: #fff; transition: background 0
   background-color: #fff;
 }
 
-/* HOVER EFFECT WITHOUT TRANSFORM */
+/* HOVER EFFECT*/
 .table-wrapper table tbody tr:hover {
   background-color: rgba(128,0,0,0.1);
   box-shadow: 0 4px 12px rgba(0,0,0,0.08);
@@ -307,7 +307,7 @@ button.secondary:hover { opacity: 0.9; transform: translateY(-2px);}
   100% { transform: translateX(0px); }
 }
 
-/* Full-screen red overlay */
+
 #deleteAllModal {
   background: rgba(192, 57, 43, 0.5); 
 }
@@ -784,7 +784,7 @@ async function exportStudents(){
     { wch: 15 }  
   ];
 
-  // ---  workbook and download ---
+ 
   const wb = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, ws, "Students");
   XLSX.writeFile(wb, `students_${new Date().toISOString().slice(0,10)}.xlsx`);
@@ -867,14 +867,14 @@ function restoreDatabase(event){
   const file = event.target.files[0];
   if(!file) return;
 
-  // Show the modal instead of confirm()
+  
   const modal = document.getElementById("restoreModal");
   modal.style.display = "flex";
 
-  // Cancel button
+  
   document.getElementById("cancelRestore").onclick = () => {
     modal.style.display = "none";
-    event.target.value = ""; // reset file input
+    event.target.value = ""; 
   };
 
   // Confirm button
@@ -924,12 +924,12 @@ async function deleteAllStudents(){
   document.getElementById("deleteAllModal").style.display = "flex";
 }
 
-// Cancel button
+
 document.getElementById("cancelDeleteAll").onclick = () => {
   document.getElementById("deleteAllModal").style.display = "none";
 };
 
-// Confirm button
+
 document.getElementById("confirmDeleteAll").onclick = async () => {
   try{
     const res = await fetch(`${API}/students`, { method: "DELETE" });
