@@ -14,97 +14,109 @@
     display:flex;
     justify-content:center;
     align-items:center;
-    background: maroon; 
+    background: linear-gradient(135deg,#7c0d0d,#3b0000,#7c0d0d); 
   }
-
-  /* LOGIN BOX */
+  
+  /* LOGIN BOX (LIGHT) */
   .login-box {
-    background: white; 
-    width: 400px;
-    padding: 40px 30px;
-    border-radius: 12px;
-    box-shadow: 0 12px 30px rgba(0,0,0,0.3);
+    background:#ffffff; 
+    width: 500px;
+    padding: 50px 40px;
+    border-radius: 14px;
+    box-shadow: 0 15px 40px rgba(0,0,0,0.6);
     text-align: center;
     transition: transform 0.3s ease;
-    backdrop-filter: blur(10px);
+    color:#333;
   }
+  
   .login-box:hover { transform: translateY(-5px); }
-
-  /* SCHOOL LOGO */
-  .login-box img {
-    width: 80px;
-    height: 80px;
-    margin-bottom: 20px;
-    border-radius: 50%;
-    border: 2px solid black;
-  }
-
+  
   /* TITLE */
   .login-box h2 {
-    color: black;
+    color:#222;
     margin-bottom: 25px;
     font-weight: 700;
   }
-
+  
   /* INPUT CONTAINER */
   .input-group {
     position: relative;
     margin-bottom: 20px;
   }
+  
   .input-group i {
     position: absolute;
     top: 50%;
     left: 12px;
     transform: translateY(-50%);
-    color: black;
+    color: #070303;
     font-size: 16px;
   }
+  
   .input-group input {
     width: 100%;
     padding: 14px 14px 14px 38px;
     border-radius: 8px;
     border: 1px solid black;
     font-size: 16px;
-    background: rgba(255,255,255,0.2);
-    color: black;
+    background: #f5f5f5;
+    color: #1d1515;
     transition: all 0.3s ease;
   }
+  
   .input-group input::placeholder {
-    color: black;
-    opacity: 0.8;
+    color: #888;
   }
+  
   .input-group input:focus {
-    border-color:black;
-    box-shadow: 0 0 8px rgba(255,255,255,0.4);
-    outline: none;
+    border-color:#7a0000;
+    background:#fff;
+    box-shadow: 0 0 8px rgba(122,0,0,0.2);
+    outline: black;
   }
-
+  
   /* BUTTON */
   .login-box button {
     width: 100%;
-    padding: 14px;
-    background: black;
+    padding: 13px;
+    background: #7a0000;
     color: white;
-    border: none;
+    border: black;
     border-radius: 8px;
     cursor: pointer;
     font-weight: 600;
     font-size: 16px;
     transition: all 0.3s ease;
   }
+  
   .login-box button:hover {
-    background: maroon;
+    background: #a30000;
     transform: translateY(-2px);
   }
-
+  
   /* ERROR MESSAGE */
   #error {
-    color: #ff8080;
+    color: #da0404;
     margin-top: 10px;
     min-height: 20px;
     font-weight: 500;
   }
-</style>
+  
+  /* LOGO */
+  .login-box img {
+    width: 100px;
+    height: 100px;
+    margin-bottom: 20px;
+    border-radius: 50%;
+    animation: floatLogo 3s ease-in-out infinite;
+  }
+  
+  @keyframes floatLogo {
+    0%   { transform: translateY(0px); }
+    50%  { transform: translateY(-12px); }
+    100% { transform: translateY(0px); }
+  }
+  </style>
 </head>
 <body>
 
@@ -128,6 +140,29 @@
 </div>
 
 <script>
+
+  const username = document.getElementById("username");
+const password = document.getElementById("password");
+const errorMsg = document.getElementById("error");
+
+
+username.addEventListener("keydown", e => {
+  if(e.key === "Enter" || e.key === "ArrowDown"){
+    e.preventDefault();
+    password.focus();
+  }
+});
+
+password.addEventListener("keydown", e => {
+  if(e.key === "Enter"){
+    e.preventDefault();
+    login();
+  }
+  if(e.key === "ArrowUp"){
+    e.preventDefault();
+    username.focus();
+  }
+});
   // --- LOGIN FUNCTION ---
   async function login(){
     try {

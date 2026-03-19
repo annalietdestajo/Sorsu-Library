@@ -6,76 +6,128 @@
 <title>Library Student Check-In</title>
 
 <style>
-* { box-sizing:border-box; margin:0; font-family:Verdana, Geneva, Tahoma, sans-serif; }
-body{
-  background:#630712;
-  height:100vh;
-  display:flex;
-  justify-content:center;
-  align-items:center;
-}
-.card{
-  background:#fff;
-  padding:60px 50px;
-  border-radius:18px;
-  box-shadow:0 10px 30px rgba(0,0,0,0.3);
-  text-align:center;
-  width:520px;
-  transition:.3s;
-}
-.card.successFlash{
-  background:#e8fff1;
-  transform:scale(1.02);
-}
-.logo{
-  width:200px;
-  margin-bottom:25px;
-  animation:floatLogo 3s ease-in-out infinite;
-}
-@keyframes floatLogo{
-  0%{transform:translateY(0) scale(1);}
-  50%{transform:translateY(-12px) scale(1.06);}
-  100%{transform:translateY(0) scale(1);}
-}
-h2{ color:#6b0f1a; margin-bottom:30px; }
-input{
-  width:100%;
-  padding:20px;
-  font-size:22px;
-  border-radius:10px;
-  border:2px solid #ccc;
-  margin-bottom:20px;
-  text-align:left;
-}
-input:focus{
-  border-color:#6b0f1a;
-  box-shadow:0 0 10px rgba(107,15,26,.3);
-}
-button{
-  width:100%;
-  padding:18px;
-  font-size:20px;
-  border:none;
-  border-radius:10px;
-  background:#6b0f1a;
-  color:#fff;
-  cursor:pointer;
-}
-button:hover{ background:#8e1b2c; }
-.register-btn{ background:#e67e22; display:none; margin-top:10px; }
-.register-card{ display:none; margin-top:20px; }
-.success{ color:green; font-weight:bold; margin-bottom:10px; }
-.error{ color:red; font-weight:bold; margin-bottom:10px; }
-</style>
+  * { box-sizing:border-box; margin:0; font-family:Verdana, Geneva, Tahoma, sans-serif; }
+  
+  body{
+    background: linear-gradient(135deg,#7c0d0d,#2b0000,#7c0d0d); 
+    height:100vh;
+    display:flex;
+    justify-content:center;
+    align-items:center;
+    color:#333;
+  }
+  
+  /* LIGHT LOGIN BOX */
+  .card{
+    background:#ffffff;
+    padding:60px 50px;
+    border-radius:18px;
+    box-shadow:0 15px 40px rgba(0,0,0,0.5);
+    text-align:center;
+    width:520px;
+    transition:.3s;
+    border:1px solid #ddd;
+    color:#333;
+  }
+  
+  .logo{
+    width:200px;
+    margin-bottom:25px;
+    animation:floatLogo 3s ease-in-out infinite;
+  }
+  
+  @keyframes floatLogo{
+    0%{transform:translateY(0) scale(1);}
+    50%{transform:translateY(-12px) scale(1.06);}
+    100%{transform:translateY(0) scale(1);}
+  }
+  
+  h2{
+    color:#222;
+    margin-bottom:30px;
+  }
+  
+  input{
+    width:100%;
+    padding:18px 20px;
+    font-size:20px;
+    border-radius:10px;
+    border:2px solid #ddd;
+    margin-bottom:20px;
+    text-align:left;
+    background:#f7f7f7;
+    color:#333;
+  }
+  
+  input::placeholder{
+    color:#777;
+  }
+  
+  input:focus{
+    border-color:#7a0000;
+    background:#fff;
+    box-shadow:0 0 8px rgba(122,0,0,0.2);
+  }
+  
+  button{
+    width:100%;
+    padding:16px;
+    font-size:18px;
+    border:none;
+    border-radius:10px;
+    background:#7a0000;
+    color:#fff;
+    cursor:pointer;
+    transition:.3s;
+  }
+  
+  button:hover{
+    background:blue;
+  }
+  
+  .register-btn{
+    background:#fd7e0f;
+    display:none;
+    margin-top:10px;
+    color:#fff;
+  }
+  
+  .register-card{
+    display:none;
+    margin-top:20px;
+  }
+  
+  /* Popup Notification */
+  .popup {
+    position: fixed;
+    top: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: rgba(0,0,0,0.9);
+    color: #fff;
+    padding: 16px 24px;
+    border-radius: 10px;
+    font-size: 18px;
+    font-weight: bold;
+    box-shadow: 0 5px 20px rgba(0,0,0,0.5);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.3s ease;
+    z-index: 1000;
+  }
+  
+  .popup.show { opacity:1; pointer-events:auto; }
+  
+  .popup.success { background:#28a745; }
+  .popup.error { background:#dc3545; }
+  
+  </style>
 </head>
 
 <body>
 <div class="card" id="card">
   <img src="c:\\Users\\Administrator\\Downloads\\Revised-SSU-Logo-small-as-of-04-30-2021.png" class="logo">
   <h2>Library Check-In</h2>
-
-  <div class="success" id="checkinSuccess"></div>
-  <div class="error" id="checkinError"></div>
 
   <input type="text" id="studentNumber" placeholder="Enter Student Number">
   <button id="checkInBtn" onclick="checkIn()">CHECK-IN</button>
@@ -91,14 +143,15 @@ button:hover{ background:#8e1b2c; }
   </div>
 </div>
 
+<!-- Popup container -->
+<div id="popup" class="popup"></div>
+
 <script>
 const API='http://localhost:5000';
 const input = document.getElementById('studentNumber');
 const checkInBtn = document.getElementById('checkInBtn');
 const registerCard = document.getElementById('registerCard');
 const registerButton = document.getElementById('registerButton');
-const checkinSuccess = document.getElementById('checkinSuccess');
-const checkinError = document.getElementById('checkinError');
 const regNumber = document.getElementById('regNumber');
 const regLast = document.getElementById('regLast');
 const regFirst = document.getElementById('regFirst');
@@ -107,12 +160,23 @@ const regCourse = document.getElementById('regCourse');
 let studentsList = [];
 let visitsList = [];
 
-/* FOCUS ONLY WHEN NEEDED */
+/* POPUP FUNCTION */
+function showPopup(message, type='success', duration=3000){
+  const popup = document.getElementById('popup');
+  popup.innerText = message;
+  popup.className = `popup show ${type}`;
+  
+  setTimeout(()=>{
+    popup.className = 'popup';
+  }, duration);
+}
+
+/* FOCUS */
 function focusMain(){
   if(registerCard.style.display!=='block'){
     input.focus();
   } else {
-    regLast.focus(); // Last Name first
+    regLast.focus();
   }
 }
 
@@ -121,28 +185,7 @@ input.addEventListener("keypress",e=>{
   if(e.key==="Enter") checkIn();
 });
 
-/* FLASH EFFECT */
-function flashSuccess(){
-  card.classList.add("successFlash");
-  setTimeout(()=>card.classList.remove("successFlash"),600);
-}
-
-/* SHOW MESSAGES */
-function showMessage(id,msg,success=true){
-  const el=document.getElementById(id);
-  el.innerText=msg;
-  el.style.display=msg?'block':'none';
-  el.style.color=success?'green':'red';
-}
-
-/* SHOW REGISTER FORM */
-function showRegisterCard(){
-  registerCard.style.display='block';
-  registerButton.style.display='none';
-  regName.focus();
-}
-
-/* FETCH STUDENTS AND VISITS */
+/* FETCH DATA */
 async function fetchData(){
   const studentsRes = await fetch(`${API}/students`);
   studentsList = await studentsRes.json();
@@ -151,94 +194,80 @@ async function fetchData(){
   visitsList = await visitsRes.json();
 }
 
-/* CHECK-IN FUNCTION */
+/* CHECK-IN */
 async function checkIn(){
   const sn = input.value.trim();
-  if(!sn) return showMessage('checkinError','Please Enter Student Number', false);
+  if(!sn) return showPopup('Please Enter Student Number','error');
 
   await fetchData();
-
   const student = studentsList.find(s => s.student_number === sn);
 
   if(student){
-    // Existing student → automatic check-in
     await fetch(`${API}/checkin`,{
       method:'POST',
       headers:{'Content-Type':'application/json'},
       body:JSON.stringify({student_number: sn})
     });
 
-    flashSuccess();
-    showMessage('checkinSuccess', `Welcome ${student.full_name}`);
+    showPopup(`Welcome ${student.full_name}`, 'success');
 
     registerCard.style.display = 'none';
     registerButton.style.display = 'none';
     checkInBtn.style.display = 'block';
     input.style.display = 'block';
-
   } else {
-    // New student → show registration form directly
     registerCard.style.display = 'block';
     registerButton.style.display = 'none';
-
-    // hide student number input & check-in button
     input.style.display = 'none';
     checkInBtn.style.display = 'none';
-
     regNumber.value = sn;
-    regLast.focus(); // LAST NAME first
+    regLast.focus();
   }
 
   input.value = '';
 }
- 
 
+/* REGISTER STUDENT */
 async function registerStudent(){
   const sn = regNumber.value.trim();
   const last = regLast.value.trim();
   const first = regFirst.value.trim();
   const course = regCourse.value.trim();
 
-  // Validate all fields
   if(!last || !first || !course)
-    return showMessage('checkinError','Fill all fields', false);
+    return showPopup('Fill all fields','error');
 
   const fullName = `${last} ${first}`;
 
-  // Register student
   await fetch(`${API}/student`, {
     method:'POST',
     headers:{'Content-Type':'application/json'},
     body:JSON.stringify({student_number: sn, full_name: fullName, course: course})
   });
 
-  // Automatic check-in
   await fetch(`${API}/checkin`, {
     method:'POST',
     headers:{'Content-Type':'application/json'},
     body:JSON.stringify({student_number: sn})
   });
 
-  flashSuccess();
   const displayName = fullName.split(' ').slice(0,2).join(' ');
-  showMessage('checkinSuccess', `Registered & Welcome ${displayName}`);
+  showPopup(`Registered & Welcome ${displayName}`, 'success');
 
-  // Hide registration form, show input & button for next student
   registerCard.style.display = 'none';
   checkInBtn.style.display = 'block';
   input.style.display = 'block';
 
-  // Clear registration fields
   regLast.value = '';
   regFirst.value = '';
   regCourse.value = '';
 
   input.focus();
 }
-/* AUTO REFRESH STUDENTS & VISITS EVERY 5 SECONDS */
+
+/* AUTO REFRESH */
 async function autoRefresh(){
   await fetchData();
-  // hide register button if input matches already existing student
   const currentSN = input.value.trim();
   if(currentSN && studentsList.some(s=>s.student_number===currentSN)){
     registerButton.style.display='none';
@@ -246,11 +275,19 @@ async function autoRefresh(){
   }
 }
 
-/* AUTO FOCUS ON LOAD */
 window.onload=focusMain;
-
-// Run auto-refresh every 5 seconds
 setInterval(autoRefresh,5000);
+
+/* INPUT NAVIGATION */
+regLast.addEventListener("keydown", e => { if(e.key === "ArrowDown"){ e.preventDefault(); regFirst.focus(); } });
+regFirst.addEventListener("keydown", e => { 
+  if(e.key === "ArrowDown"){ e.preventDefault(); regCourse.focus(); }
+  if(e.key === "ArrowUp"){ e.preventDefault(); regLast.focus(); }
+});
+regCourse.addEventListener("keydown", e => { 
+  if(e.key === "ArrowUp"){ e.preventDefault(); regFirst.focus(); }
+  if(e.key === "Enter"){ e.preventDefault(); registerStudent(); }
+});
 </script>
 </body>
 </html>

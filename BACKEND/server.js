@@ -261,50 +261,69 @@ app.get("/export/visits", (req,res)=>{
   );
 });
 
-
-
-// DELETE ALL STUDENTS & THEIR VISITS
+// --- DELETE ALL STUDENTS & VISITS ---
 app.delete("/students", (req, res) => {
   db.serialize(() => {
     db.run("DELETE FROM students");
-    db.run("DELETE FROM visits"); 
+    db.run("DELETE FROM visitor_log");
 
     db.run("DELETE FROM sqlite_sequence WHERE name='students'");
-    db.run("DELETE FROM sqlite_sequence WHERE name='visits'");
+    db.run("DELETE FROM sqlite_sequence WHERE name='visitor_log'");
 
     res.json({ message: "All students and visits deleted successfully!" });
   });
 });
 
-// RESTORE STUDENTS FROM EXCEL
-app.post("/restore/students", (req, res) => {
-  const students = req.body;
+// --- RESTORE STUDENTS FROM EXCEL ---
+app.post("/restore/database", (req, res) => {
 
-  if(!Array.isArray(students)){
-    return res.status(400).json({ error: "Invalid data format" });
+  const { students, visits } = req.body;
+
+  if(!Array.isArray(students) || !Array.isArray(visits)){
+    return res.status(400).json({ error: "Invalid restore data" });
   }
 
-  db.serialize(() => {
-    // DELETE existing data first
-    db.run("DELETE FROM students");
+  db.serialize(()=>{
 
-    const stmt = db.prepare(`
-      INSERT INTO students (student_number, full_name, course)
+    // clear tables first
+    db.run("DELETE FROM students");
+    db.run("DELETE FROM visitor_log");
+
+    // restore students
+    const studentStmt = db.prepare(`
+      INSERT INTO students(student_number, full_name, course)
       VALUES (?, ?, ?)
     `);
 
-    students.forEach(s => {
-      stmt.run(
+    students.forEach(s=>{
+      studentStmt.run(
         s.student_number || "",
         s.full_name || "",
         s.course || ""
       );
     });
 
-    stmt.finalize();
+    studentStmt.finalize();
 
-    res.json({ message: "Database restored successfully!" });
+    // restore visits
+    const visitStmt = db.prepare(`
+      INSERT INTO visitor_log(student_number, visit_time)
+      VALUES (?, ?)
+    `);
+
+    visits.forEach(v=>{
+      visitStmt.run(
+        v.student_number || "",
+        v.visit_time || ""
+      );
+    });
+
+    visitStmt.finalize();
+
+    res.json({ message:"Database restored successfully" });
+
   });
+
 });
 
 // --- ADMIN LOGIN ---

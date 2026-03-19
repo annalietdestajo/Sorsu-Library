@@ -49,23 +49,89 @@ body { display: flex; background: #800000; color: #fff; transition: background 0
 /* CARDS */
 .card { background: #fff; border-radius: 12px; padding: 20px; margin-bottom: 30px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); }
 .card table { width: 100%; border-collapse: collapse; border-radius: 12px; overflow: hidden; background: #fff; }
-.table-wrapper { max-height: 400px; overflow-y: auto; overflow-x: auto; border-radius: 12px; background: #fff;}
-.table-wrapper table { width: 100%; min-width: 600px; border-collapse: collapse; }
-.table-wrapper table th, .table-wrapper table td { padding: 12px; border-bottom: 1px solid blue; text-align: left; transition: background 0.3s ease, transform 0.2s ease; }
-.table-wrapper table th { background: blue; color: #fff; font-weight: 600; position: center; top: 0; z-index: 2; }
-.table-wrapper table tr:nth-child(even) { background: #fff; color: #000; }
-.table-wrapper table tr:nth-child(odd) { background: #f9f9f9; color: #000; }
-.table-wrapper table tr:hover { background: rgba(153,0,0,0.1); transform: scale(1.02); box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
 
-/* ICON-ONLY BUTTONS */
-.table-wrapper table td button {
-  margin: 0; padding: 0; width: 30px; height: 25px; font-size: 16px;
-  border-radius: 6px; display: inline-flex; align-items: center; justify-content: center; gap: 0; cursor: pointer; border: none; transition: all 0.2s ease;
+/* ACTUAL TABLE STYLE */
+.table-wrapper {
+  max-height: 400px;
+  overflow-y: auto; /* scrollbar always shows on content overflow */
+  overflow-x: auto;
+  border-radius: 12px;
+  background: #fff;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.08);
 }
-.table-wrapper table td button.edit { background-color: #2980b9; color: #fff; }
-.table-wrapper table td button.delete { background-color: #c0392b; color: #fff; }
-.table-wrapper table td button:hover { transform: translateY(-2px); opacity: 0.9; }
 
+.table-wrapper table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+  min-width: 600px;
+}
+
+.table-wrapper table thead th {
+  position: sticky;
+  top: 0;
+  z-index: 1; 
+  background-color: #800000;
+  color: #fff;
+  font-weight: 600;
+  padding: 12px 15px;
+  text-align: left;
+  border-bottom: 2px solid #fff;
+}
+.table-wrapper table tbody td {
+  padding: 12px 15px;
+  text-align: left;
+  border-bottom: 1px solid #ddd;
+  color: #333;
+  transition: background 0.3s ease;
+}
+
+/* ROW STRIPES */
+.table-wrapper table tbody tr:nth-child(even) {
+  background-color: #f9f9f9;
+}
+
+.table-wrapper table tbody tr:nth-child(odd) {
+  background-color: #fff;
+}
+
+/* HOVER EFFECT WITHOUT TRANSFORM */
+.table-wrapper table tbody tr:hover {
+  background-color: rgba(128,0,0,0.1);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+}
+
+/* BUTTONS IN TABLE CELLS */
+.table-wrapper table td button {
+  margin: 0; 
+  padding: 0; 
+  width: 30px; 
+  height: 25px; 
+  font-size: 16px;
+  border-radius: 6px; 
+  display: inline-flex; 
+  align-items: center; 
+  justify-content: center; 
+  gap: 0; 
+  cursor: pointer; 
+  border: none; 
+  transition: all 0.2s ease;
+}
+
+.table-wrapper table td button.edit { 
+  background-color: #2980b9; 
+  color: #fff; 
+}
+
+.table-wrapper table td button.delete { 
+  background-color: #c0392b; 
+  color: #fff; 
+}
+
+.table-wrapper table td button:hover { 
+  transform: translateY(-2px); 
+  opacity: 0.9; 
+}
 /* HEADER */
 .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
 
@@ -105,16 +171,17 @@ button.secondary:hover { opacity: 0.9; transform: translateY(-2px);}
   display: none;
   position: fixed;
   inset: 0;
-  background: rgba(0,0,0,0.3); /* slight dark overlay para kita modal */
+  background: rgba(0,0,0,0.3);
   justify-content: center;
   align-items: center;
   transition: opacity 0.3s ease;
+  z-index: 1000; /
 }
 
 /* MODAL BOX */
 .modal-content {
-  background: #ffffff; /* white background */
-  color: #000000; /* black text */
+  background: #ffffff; 
+  color: #000000; 
   padding: 25px;
   border-radius: 12px;
   width: 320px;
@@ -223,13 +290,34 @@ button.secondary:hover { opacity: 0.9; transform: translateY(-2px);}
 .action-dropdown .dropdown-content button:hover {
   background: #f0f4ff;
 }
+
+/* DELETE ALL WARNING EFFECT */
+.delete-warning {
+  animation: shake 0.3s ease-in-out;
+  border: 3px solid #c0392b;
+}
+
+/* Shake animation */
+@keyframes shake {
+  0% { transform: translateX(0px); }
+  20% { transform: translateX(-8px); }
+  40% { transform: translateX(8px); }
+  60% { transform: translateX(-8px); }
+  80% { transform: translateX(8px); }
+  100% { transform: translateX(0px); }
+}
+
+/* Full-screen red overlay */
+#deleteAllModal {
+  background: rgba(192, 57, 43, 0.5); 
+}
 </style>
 </head>
 <body>
 
   <div class="sidebar">
     <img src="C:\\Users\\Administrator\\OneDrive\\Documents\\Library Visitor Monitoring System\\FRONTEND\\Revised-SSU-Logo-small-as-of-04-30-2021.png" alt="School Logo">
-    <h2>LIBRARY SYSTEM</h2>
+    <h2>SORSU LIBRARY</h2>
     <button onclick="openTab('checkin')"><i class="fas fa-sign-in-alt"></i> CHECK-IN</button>
     <button onclick="openTab('students')"><i class="fas fa-user-graduate"></i> STUDENTS</button>
     <button onclick="openTab('visitlog')"><i class="fas fa-history"></i> VISIT LOG</button>
@@ -322,22 +410,24 @@ button.secondary:hover { opacity: 0.9; transform: translateY(-2px);}
       <input id="newMiddle" placeholder="Middle Name" required>
       <input id="newCourse" placeholder="Course" required>
         <div class="modal-buttons">
-          <button class="action" onclick="updateStudent()">
-            <i class="fas fa-save"></i> Update
-          </button>
+          
           <button class="action" onclick="addStudent()"><i class="fas fa-save"></i> Save</button>
           <button class="secondary" onclick="closeModal()"><i class="fas fa-times"></i> Cancel</button>
         </div>
     </div>
   </div>
 
-  <!-- EDIT MODAL -->
+<!-- EDIT MODAL -->
 <div id="editModal" class="modal">
   <div class="modal-content">
     <h3>Edit Student</h3>
-    <input id="editNumber" placeholder="Student Number"> 
-    <input id="editName" placeholder="Full Name">
+
+    <input id="editNumber" placeholder="Student Number">
+    <input id="editLast" placeholder="Last Name">
+    <input id="editFirst" placeholder="First Name">
+    <input id="editMiddle" placeholder="Middle Name">
     <input id="editCourse" placeholder="Course">
+
     <div class="modal-buttons">
       <button class="action" onclick="updateStudent()"><i class="fas fa-save"></i> Update</button>
       <button class="secondary" onclick="closeEditModal()"><i class="fas fa-times"></i> Cancel</button>
@@ -354,6 +444,41 @@ button.secondary:hover { opacity: 0.9; transform: translateY(-2px);}
       </div>
     </div>
   </div>
+
+  <!-- DELETE ALL STUDENTS MODAL -->
+  <div id="deleteAllModal" class="modal">
+    <div class="modal-content delete-warning">
+      <div style="text-align:center; margin-bottom:15px;">
+        <i class="fas fa-exclamation-triangle" style="font-size:50px; color:#c0392b;"></i>
+      </div>
+      <h3 style="text-align:center; color:#c0392b;">DELETE ALL STUDENTS?</h3>
+      <p style="text-align:center;">This will also reset all visit logs! <br> This action <strong>cannot be undone</strong>.</p>
+      <div class="modal-buttons" style="justify-content:center; gap:15px;">
+        <button class="secondary" id="cancelDeleteAll"><i class="fas fa-times"></i> Cancel</button>
+        <button class="action" id="confirmDeleteAll" style="background:#c0392b; color:white;"><i class="fas fa-trash"></i> YES, DELETE ALL</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- RESTORE DATABASE MODAL -->
+<div id="restoreModal" class="modal">
+  <div class="modal-content delete-warning">
+    <div style="text-align:center; margin-bottom:15px;">
+      <i class="fas fa-exclamation-circle" style="font-size:50px; color:#2980b9;"></i>
+    </div>
+    <h3 style="text-align:center; color:#2980b9;">Restore Database?</h3>
+    <p style="text-align:center;">
+      This will replace all <strong>students</strong> and <strong>visit logs</strong>!<br>
+      This action <strong>cannot be undone</strong>.
+    </p>
+    <div class="modal-buttons" style="justify-content:center; gap:15px;">
+      <button class="secondary" id="cancelRestore"><i class="fas fa-times"></i> Cancel</button>
+      <button class="action" id="confirmRestore" style="background:#2980b9; color:white;">
+        <i class="fas fa-upload"></i> Restore
+      </button>
+    </div>
+  </div>
+</div>
 
   <div id="notification-container" style="
       position: fixed;
@@ -375,6 +500,8 @@ button.secondary:hover { opacity: 0.9; transform: translateY(-2px);}
 const API='http://localhost:5000';
 let lastVisitId=null, studentToDelete=null, editingStudentNumber=null;
 
+let autoRefreshEnabled = true; 
+
 // --- TABS ---
 function openTab(id){
   document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
@@ -391,9 +518,15 @@ function openModal(){ document.getElementById('modal').style.display='flex'; }
 function closeModal(){ document.getElementById('modal').style.display='none'; }
 function openEditModal(number,name,course){
   editingStudentNumber = number;
+
+  const { last, first, middle } = splitName(name);
+
   document.getElementById('editNumber').value = number;
-  document.getElementById('editName').value = name;
+  document.getElementById('editLast').value = last;
+  document.getElementById('editFirst').value = first;
+  document.getElementById('editMiddle').value = middle;
   document.getElementById('editCourse').value = course;
+
   document.getElementById('editModal').style.display = 'flex';
 }
 function closeEditModal(){ editingStudentNumber=null; document.getElementById('editModal').style.display='none'; }
@@ -464,7 +597,7 @@ async function addStudent(){
     return;
   }
 
-  const full_name = `${first} ${middle} ${last}`.trim();
+  const full_name = `${last} ${first} ${middle}`.trim();
 
   await fetch(`${API}/student`, {
     method:'POST',
@@ -479,13 +612,17 @@ async function addStudent(){
 // --- UPDATE STUDENT ---
 async function updateStudent(){
   const number = document.getElementById("editNumber").value.trim();
-  const full_name = document.getElementById("editName").value.trim();
+  const last = document.getElementById("editLast").value.trim();
+  const first = document.getElementById("editFirst").value.trim();
+  const middle = document.getElementById("editMiddle").value.trim();
   const course = document.getElementById("editCourse").value.trim();
 
-  if(!number || !full_name){
-    showNotification("Student Number and Name are required!", "error");
+  if(!number || !last || !first){
+    showNotification("Student Number, Last Name and First Name are required!", "error");
     return;
   }
+
+  const full_name = `${last} ${first} ${middle}`.trim();
 
   try{
     const res = await fetch(`${API}/student/${editingStudentNumber}`,{
@@ -546,9 +683,7 @@ async function loadVisits(search=''){
 
   const uniqueData = Array.from(uniqueMap.values());
 
-  // ================================
-  // ✅ VISIT LOG → ALPHABETICAL
-  // ================================
+ 
   const visitLogSorted = [...uniqueData].sort((a,b)=>{
     const na = splitName(a.full_name || '');
     const nb = splitName(b.full_name || '');
@@ -610,15 +745,17 @@ async function loadReports(){
 
     // TOP STUDENT
     const studentCount = {};
-    visits.forEach(v => studentCount[v.full_name]=(studentCount[v.full_name]||0)+1);
+    visits.forEach(v => studentCount[v.full_name] = (studentCount[v.full_name] || 0) + 1);
     topStudent.innerText = Object.keys(studentCount)
-      .reduce((a,b)=>studentCount[a]>studentCount[b]?a:b,"N/A");
+      .reduce((a,b) => studentCount[a] > studentCount[b] ? a : b, "N/A")
+      .toUpperCase();
 
     // TOP COURSE
     const courseCount = {};
-    visits.forEach(v => courseCount[v.course]=(courseCount[v.course]||0)+1);
+    visits.forEach(v => courseCount[v.course] = (courseCount[v.course] || 0) + 1);
     topCourseVisits.innerText = Object.keys(courseCount)
-      .reduce((a,b)=>courseCount[a]>courseCount[b]?a:b,"N/A");
+      .reduce((a,b) => courseCount[a] > courseCount[b] ? a : b, "N/A")
+      .toUpperCase(); 
 
   }catch(err){
     console.error(err);
@@ -647,7 +784,7 @@ async function exportStudents(){
     { wch: 15 }  
   ];
 
-  // --- Create workbook and download ---
+  // ---  workbook and download ---
   const wb = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, ws, "Students");
   XLSX.writeFile(wb, `students_${new Date().toISOString().slice(0,10)}.xlsx`);
@@ -726,59 +863,88 @@ async function backupDatabase(){
   }catch(err){ console.error(err); alert("Backup failed!"); }
 }
 
-async function restoreDatabase(event){
+function restoreDatabase(event){
   const file = event.target.files[0];
   if(!file) return;
 
-  if(!confirm("Restore database from this file? Current students will be replaced!")) return;
+  // Show the modal instead of confirm()
+  const modal = document.getElementById("restoreModal");
+  modal.style.display = "flex";
 
-  const reader = new FileReader();
-
-  reader.onload = async function(e){
-    const data = new Uint8Array(e.target.result);
-    const workbook = XLSX.read(data, { type: "array" });
-
-    const sheet = workbook.Sheets[workbook.SheetNames[0]];
-    const json = XLSX.utils.sheet_to_json(sheet);
-
-    try{
-      const res = await fetch(`${API}/restore/students`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(json)
-      });
-
-      const result = await res.json();
-      showNotification("Restore complete!", "success");
-
-      loadStudents();
-      loadReports();
-    }catch(err){
-      console.error(err);
-      alert("Restore failed!");
-    }
+  // Cancel button
+  document.getElementById("cancelRestore").onclick = () => {
+    modal.style.display = "none";
+    event.target.value = ""; // reset file input
   };
 
-  reader.readAsArrayBuffer(file);
+  // Confirm button
+  document.getElementById("confirmRestore").onclick = async () => {
+    modal.style.display = "none";
+
+    const reader = new FileReader();
+
+    reader.onload = async function(e){
+      const data = new Uint8Array(e.target.result);
+      const workbook = XLSX.read(data,{type:"array"});
+
+      const studentsSheet = workbook.Sheets["Students"];
+      const visitsSheet = workbook.Sheets["Visits"];
+
+      const students = XLSX.utils.sheet_to_json(studentsSheet);
+      const visits = XLSX.utils.sheet_to_json(visitsSheet);
+
+      try{
+        autoRefreshEnabled = false;
+
+        const res = await fetch(`${API}/restore/database`,{
+          method:"POST",
+          headers:{ "Content-Type":"application/json" },
+          body: JSON.stringify({ students, visits })
+        });
+
+        const result = await res.json();
+        showNotification("Database restored successfully!", "success");
+
+        await loadStudents();
+        await loadVisits();
+        await loadReports();
+
+      }catch(err){
+        console.error(err);
+        showNotification("Restore failed!", "error");
+      }finally{
+        autoRefreshEnabled = true;
+      }
+    };
+
+    reader.readAsArrayBuffer(file);
+  };
 }
 async function deleteAllStudents(){
-  const confirmDelete = confirm("Delete ALL students? This will also reset all visit logs!");
-  if(!confirmDelete) return;
+  document.getElementById("deleteAllModal").style.display = "flex";
+}
 
+// Cancel button
+document.getElementById("cancelDeleteAll").onclick = () => {
+  document.getElementById("deleteAllModal").style.display = "none";
+};
+
+// Confirm button
+document.getElementById("confirmDeleteAll").onclick = async () => {
   try{
     const res = await fetch(`${API}/students`, { method: "DELETE" });
-    loadStudents(); 
-    loadReports();
     const data = await res.json();
 
-    showNotification(data.message || "All students and visits deleted!", "success");
+    document.getElementById("deleteAllModal").style.display = "none";
 
-     
+    loadStudents();
+    loadReports();
+    showNotification(data.message || "All students and visits deleted!", "success");
   }catch(err){
     console.error(err);
     showNotification("Delete failed!", "error");
   }
-}
+};
 
 function showNotification(message, type="info", duration=2500){
   const container = document.getElementById("notification-container");
@@ -814,12 +980,12 @@ function showNotification(message, type="info", duration=2500){
 function logout(){ localStorage.removeItem("adminLoggedIn"); window.location.href="admin-login.html"; }
 
 // --- AUTO REFRESH ---
-setInterval(() => { 
-  loadVisits(); 
-  loadReports(); 
-  loadStudents(); 
+setInterval(async () => {
+  if(!autoRefreshEnabled) return; 
+  await loadVisits();
+  await loadReports();
+  await loadStudents();
 }, 10000);
-
 // INITIAL LOAD
 loadStudents(); loadVisits(); loadReports();
 
