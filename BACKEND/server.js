@@ -7,7 +7,13 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-const db = new sqlite3.Database("./database.db");
+const db = new sqlite3.Database("./database.db", (err) => {
+  if (err) {
+    console.error("Database error:", err.message);
+  } else {
+    console.log("Connected to database");
+  }
+});
 
 // --- CREATE TABLES ---
 db.serialize(() => {
@@ -335,3 +341,9 @@ app.post("/admin/login",(req,res)=>{
 
 // --- START SERVER ---
 app.listen(5000, ()=>console.log("Server running at http://localhost:5000"));
+
+const PORT = process.env.PORT || 3000;
+
+app.listen(PORT, () => {
+  console.log("Server running on port " + PORT);
+});
