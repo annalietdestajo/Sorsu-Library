@@ -339,8 +339,6 @@ app.post("/admin/login",(req,res)=>{
   else res.json({success:false});
 });
 
-// --- START SERVER ---
-app.listen(5000, ()=>console.log("Server running at http://localhost:5000"));
 
 const PORT = process.env.PORT || 3000;
 
