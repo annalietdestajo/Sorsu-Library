@@ -209,7 +209,8 @@ async function checkIn(){
       body:JSON.stringify({student_number: sn})
     });
 
-    showPopup(`Welcome ${student.full_name}`, 'success');
+    const firstName = student.full_name.split(' ')[1]; 
+    showPopup(`Welcome ${firstName}`, 'success');
 
     registerCard.style.display = 'none';
     registerButton.style.display = 'none';
@@ -251,8 +252,8 @@ async function registerStudent(){
     body:JSON.stringify({student_number: sn})
   });
 
-  const displayName = fullName.split(' ').slice(0,2).join(' ');
-  showPopup(`Registered & Welcome ${displayName}`, 'success');
+  const firstName = fullName.split(' ')[1];
+  showPopup(`Registered & Welcome ${firstName}`, 'success');
 
   registerCard.style.display = 'none';
   checkInBtn.style.display = 'block';
