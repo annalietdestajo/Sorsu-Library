@@ -502,6 +502,23 @@ button.secondary:hover { opacity: 0.9; transform: translateY(-2px);}
   let lastVisitId=null, studentToDelete=null, editingStudentNumber=null;
   let autoRefreshEnabled = true; 
 
+  window.addEventListener('newCheckin', async (e) => {
+    const v = e.detail;
+  
+    const tr = `<tr>
+      <td>${v.student_number.toUpperCase()}</td>
+      <td>${v.full_name.toUpperCase()}</td>
+      <td>${v.course.toUpperCase()}</td>
+      <td>${v.visit_time ? new Date(v.visit_time).toLocaleString() : new Date().toLocaleString()}</td>
+    </tr>`;
+  
+    visitTable.insertAdjacentHTML('afterbegin', tr);
+    recentVisits.insertAdjacentHTML('afterbegin', tr);
+  
+    await loadReports();
+  });
+  
+
 // --- TABS ---
 function openTab(id){
   document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
@@ -666,7 +683,7 @@ async function loadVisits(search='') {
     <td>${v.student_number.toUpperCase()}</td>
     <td>${v.full_name.toUpperCase()}</td>
     <td>${v.course.toUpperCase()}</td>
-    <td>${new Date(v.visit_time).toLocaleString()}</td>
+    <td>${v.visit_time ? new Date(v.visit_time).toLocaleString() : new Date().toLocaleString()}</td>
   </tr>`).join('');
 
   // Recent Visits
@@ -675,7 +692,7 @@ async function loadVisits(search='') {
       <td>${v.student_number.toUpperCase()}</td>
       <td>${v.full_name.toUpperCase()}</td>
       <td>${v.course.toUpperCase()}</td>
-      <td>${new Date(v.visit_time).toLocaleString()}</td>
+      <td>${v.visit_time ? new Date(v.visit_time).toLocaleString() : new Date().toLocaleString()}</td>
     </tr>`).join('');
 }
 
