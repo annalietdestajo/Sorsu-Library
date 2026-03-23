@@ -56,6 +56,7 @@ app.delete("/student/:id", async (req, res) => {
 app.post("/checkin", async (req, res) => {
   const { student_number } = req.body;
 
+  
   const { data: student, error: studentErr } = await supabase
     .from('students')
     .select('*')
@@ -66,16 +67,18 @@ app.post("/checkin", async (req, res) => {
     return res.status(404).json({ message: "Student not found" });
   }
 
+ 
   const { error: visitErr } = await supabase
     .from('visits')
-    .insert([{ student_number }]);
+    .insert([{ student_number }]);  
 
   if (visitErr) return res.status(500).json(visitErr);
 
   const fullName = `${student.last_name}, ${student.first_name} ${student.middle_name || ""}`;
+  
+ 
   res.json({ message: `Checked in: ${fullName}` });
 });
-
 // --- GET STUDENTS ---
 app.get("/students", async (req, res) => {
   const { data, error } = await supabase
