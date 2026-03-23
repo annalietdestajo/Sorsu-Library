@@ -516,10 +516,8 @@ function openTab(id){
 // --- MODALS ---
 function openModal(){ document.getElementById('modal').style.display='flex'; }
 function closeModal(){ document.getElementById('modal').style.display='none'; }
-function openEditModal(number,name,course){
+function openEditModal(number, last, first, middle, course) {
   editingStudentNumber = number;
-
-  const { last, first, middle } = splitName(name);
 
   document.getElementById('editNumber').value = number;
   document.getElementById('editLast').value = last;
@@ -532,52 +530,39 @@ function openEditModal(number,name,course){
 function closeEditModal(){ editingStudentNumber=null; document.getElementById('editModal').style.display='none'; }
 
 // --- STUDENTS ---
-function splitName(fullName){
-  const parts = fullName.trim().split(' ');
-  if(parts.length === 2){
-    return { last: parts[0], first: parts[1], middle: '' };  // Last First
-  } else if(parts.length > 2){
-    return { last: parts[0], first: parts[1], middle: parts.slice(2).join(' ') };
-  } else {
-    return { last: '', first: fullName, middle: '' };
-  }
+function formatName(student) {
+ 
+  return `${student.last_name.toUpperCase()}, ${student.first_name.toUpperCase()} ${student.middle_name?.toUpperCase() || ""}`.trim();
 }
 
-async function loadStudents(search=''){
+async function loadStudents(search='') {
   const res = await fetch(`${API}/students`);
   const data = await res.json();
 
-  const filtered = data
-    .filter(s => (s.student_number||'').trim() !== '')
-    .filter(s =>
-      (s.student_number||'').includes(search) ||
-      (s.full_name||'').toLowerCase().includes(search.toLowerCase()) ||
-      (s.course||'').toLowerCase().includes(search.toLowerCase())
-    );
+  const filtered = data.filter(s =>
+    (s.student_number||'').includes(search) ||
+    (s.last_name||'').toLowerCase().includes(search.toLowerCase()) ||
+    (s.first_name||'').toLowerCase().includes(search.toLowerCase()) ||
+    (s.middle_name||'').toLowerCase().includes(search.toLowerCase()) ||
+    (s.course||'').toLowerCase().includes(search.toLowerCase())
+  );
 
-    filtered.sort((a,b)=>{
-      const na = splitName(a.full_name || '');
-      const nb = splitName(b.full_name || '');
-      return `${na.last} ${na.first} ${na.middle}`
-        .localeCompare(`${nb.last} ${nb.first} ${nb.middle}`);
-    });
+  filtered.sort((a,b)=>a.last_name.localeCompare(b.last_name));
 
   studentTable.innerHTML = filtered.map(s => {
-    const number = (s.student_number || '').toUpperCase();
-    const { last, first, middle } = splitName(s.full_name || '');
-    const course = (s.course || '').toUpperCase();
-
     return `<tr>
-      <td>${number}</td>
-      <td>${last.toUpperCase()}, ${first.toUpperCase()} ${middle.toUpperCase()}</td>
-      <td>${course}</td>
+      <td>${s.student_number.toUpperCase()}</td>
+      <td>${formatName(s)}</td>
+      <td>${(s.course||'').toUpperCase()}</td>
       <td style="display:flex; gap:5px;">
         <button class="edit" onclick="openEditModal(
-          '${number.replace(/'/g,"\\'")}',
-          '${s.full_name.replace(/'/g,"\\'")}',
-          '${course.replace(/'/g,"\\'")}'
+          '${s.student_number}',
+          '${s.last_name}',
+          '${s.first_name}',
+          '${s.middle_name || ''}',
+          '${s.course || ''}'
         )"><i class="fas fa-edit"></i></button>
-        <button class="delete" onclick="confirmDelete('${number.replace(/'/g,"\\'")}')">
+        <button class="delete" onclick="confirmDelete('${s.student_number}')">
           <i class="fas fa-trash"></i>
         </button>
       </td>
@@ -662,7 +647,7 @@ document.getElementById('confirmDelete').onclick = async ()=>{
 }
 
 // --- VISITS ---
-async function loadVisits(search=''){
+async function loadVisits(search='') {
   const res = await fetch(`${API}/visits`);
   const data = await res.json();
 
@@ -672,53 +657,26 @@ async function loadVisits(search=''){
     v.course.toLowerCase().includes(search.toLowerCase())
   );
 
-  const uniqueMap = new Map();
-  filtered.forEach(v=>{
-    if(!uniqueMap.has(v.student_number) ||
-       new Date(v.visit_time) > new Date(uniqueMap.get(v.student_number).visit_time)){
-      uniqueMap.set(v.student_number, v);
-    }
+  // Sort by student name
+  const sorted = filtered.sort((a,b)=>{
+    return a.full_name.localeCompare(b.full_name);
   });
 
-  const uniqueData = Array.from(uniqueMap.values());
+  visitTable.innerHTML = sorted.map(v => `<tr>
+    <td>${v.student_number.toUpperCase()}</td>
+    <td>${v.full_name.toUpperCase()}</td>
+    <td>${v.course.toUpperCase()}</td>
+    <td>${new Date(v.visit_time).toLocaleString()}</td>
+  </tr>`).join('');
 
- 
-  const visitLogSorted = [...uniqueData].sort((a,b)=>{
-    const na = splitName(a.full_name || '');
-    const nb = splitName(b.full_name || '');
-    return `${na.last} ${na.first} ${na.middle}`
-      .localeCompare(`${nb.last} ${nb.first} ${nb.middle}`);
-  });
-
- 
-  const checkInSorted = [...uniqueData]
-    .sort((a,b)=>new Date(b.visit_time)-new Date(a.visit_time));
-
-  // -------- VISIT LOG TABLE --------
-  visitTable.innerHTML = visitLogSorted.map(v=>{
-    const { last, first, middle } = splitName(v.full_name || '');
-    return `<tr>
+  // Recent Visits
+  recentVisits.innerHTML = [...sorted].sort((a,b)=>new Date(b.visit_time)-new Date(a.visit_time))
+    .map((v,idx)=>`<tr class="${idx===0?'new-entry':''}">
       <td>${v.student_number.toUpperCase()}</td>
-      <td>${last.toUpperCase()}, ${first.toUpperCase()} ${middle.toUpperCase()}</td>
+      <td>${v.full_name.toUpperCase()}</td>
       <td>${v.course.toUpperCase()}</td>
       <td>${new Date(v.visit_time).toLocaleString()}</td>
-    </tr>`;
-  }).join('');
-
-  // -------- CHECK-IN TABLE --------
-  recentVisits.innerHTML = checkInSorted.map((v,idx)=>{
-    const { last, first, middle } = splitName(v.full_name || '');
-    const highlight = (idx===0 && v.id!==lastVisitId) ? 'new-entry' : '';
-
-    return `<tr class="${highlight}">
-      <td>${v.student_number.toUpperCase()}</td>
-      <td>${last.toUpperCase()}, ${first.toUpperCase()} ${middle.toUpperCase()}</td>
-      <td>${v.course.toUpperCase()}</td>
-      <td>${new Date(v.visit_time).toLocaleString()}</td>
-    </tr>`;
-  }).join('');
-
-  if(checkInSorted.length) lastVisitId = checkInSorted[0].id;
+    </tr>`).join('');
 }
 
 // --- REPORTS ---
