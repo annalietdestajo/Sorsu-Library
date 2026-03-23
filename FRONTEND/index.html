@@ -147,7 +147,7 @@
 <div id="popup" class="popup"></div>
 
 <script>
-const API='https://your-app.onrender.com';
+  const API='https://sorsu-library.onrender.com';
 const input = document.getElementById('studentNumber');
 const checkInBtn = document.getElementById('checkInBtn');
 const registerCard = document.getElementById('registerCard');
@@ -243,7 +243,13 @@ async function registerStudent(){
   await fetch(`${API}/student`, {
     method:'POST',
     headers:{'Content-Type':'application/json'},
-    body:JSON.stringify({student_number: sn, full_name: fullName, course: course})
+    body: JSON.stringify({
+      student_number: sn,
+      last_name: last,
+      first_name: first,
+      middle_name: "",
+      course: course
+    })
   });
 
   await fetch(`${API}/checkin`, {
