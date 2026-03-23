@@ -19,6 +19,8 @@ app.get("/admin", (req, res) => {
 });
 
 
+const path = require("path");
+
 const DB_PATH = path.join("/mnt/data", "database.db");
 
 const db = new sqlite3.Database(DB_PATH, (err) => {
