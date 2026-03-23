@@ -13,6 +13,10 @@ app.use(express.static(path.join(__dirname, "FRONTEND")));
 app.get("/", (req, res) => {
   res.sendFile(path.join(__dirname, "FRONTEND", "index.html"));
 });
+
+app.get("/admin", (req, res) => {
+  res.sendFile(path.join(__dirname, "FRONTEND", "admin-login.html"));
+});
 const db = new sqlite3.Database("./database.db", (err) => {
   if (err) {
     console.error("Database error:", err.message);
