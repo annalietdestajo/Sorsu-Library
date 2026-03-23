@@ -587,28 +587,27 @@ async function loadStudents(search=''){
 
 async function addStudent(){
   const last = document.getElementById('newLast').value.trim();
-  const first = document.getElementById('newFirst').value.trim();
-  const middle = document.getElementById('newMiddle').value.trim();
-  const number = document.getElementById('newNumber').value.trim();
-  const course = document.getElementById('newCourse').value.trim();
+const first = document.getElementById('newFirst').value.trim();
+const middle = document.getElementById('newMiddle').value.trim();
+const number = document.getElementById('newNumber').value.trim();
+const course = document.getElementById('newCourse').value.trim();
 
-  if(!last || !first || !number) {
-    showNotification("Student Number, Last Name, and First Name are required!", "error");
-    return;
-  }
+await fetch(`${API}/student`, {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({
+    student_number: number,
+    last_name: last,
+    first_name: first,
+    middle_name: middle,
+    course: course
+  })
+});
 
-  const full_name = `${last} ${first} ${middle}`.trim();
-
-  await fetch(`${API}/student`, {
-    method:'POST',
-    headers:{'Content-Type':'application/json'},
-    body:JSON.stringify({student_number:number, full_name, course})
-  });
-
-  closeModal(); 
+closeModal(); 
   loadStudents();
 }
-
+  
 // --- UPDATE STUDENT ---
 async function updateStudent(){
   const number = document.getElementById("editNumber").value.trim();

@@ -20,10 +20,12 @@ app.get("/admin", (req, res) => res.sendFile(path.join(__dirname, "FRONTEND", "a
 // --- ADD STUDENT ---
 app.post("/student", async (req, res) => {
   const { student_number, last_name, first_name, middle_name, course } = req.body;
+
   const { data, error } = await supabase
     .from('students')
     .insert([{ student_number, last_name, first_name, middle_name, course }])
     .select();
+
   if (error) return res.status(400).json(error);
   res.json({ message: "Student added", student: data[0] });
 });
