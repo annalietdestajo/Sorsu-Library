@@ -17,10 +17,16 @@ app.get("/admin", (req, res) => {
   res.sendFile(path.join(__dirname, "FRONTEND", "admin-login.html"));
 });
 
+const path = require("path");
+
 const DB_PATH = path.join("/mnt/data", "database.db");
+
 const db = new sqlite3.Database(DB_PATH, (err) => {
-  if (err) console.error("Database error:", err.message);
-  else console.log("Connected to database:", DB_PATH);
+  if (err) {
+    console.error("Database error:", err.message);
+  } else {
+    console.log("Connected to database at", DB_PATH);
+  }
 });
 
 // --- CREATE TABLES ---
