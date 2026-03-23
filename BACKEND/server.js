@@ -30,7 +30,6 @@ app.post("/student", async (req, res) => {
   if (error) return res.status(400).json(error);
   res.json({ message: "Student added", student: data[0] });
 });
-
 // --- UPDATE STUDENT ---
 app.put("/student/:id", async (req, res) => {
   const id = req.params.id;
