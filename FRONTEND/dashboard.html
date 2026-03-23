@@ -502,199 +502,462 @@ button.secondary:hover { opacity: 0.9; transform: translateY(-2px);}
   let lastVisitId=null, studentToDelete=null, editingStudentNumber=null;
   let autoRefreshEnabled = true; 
 
-  // --- TABS ---
-  function openTab(id){
-    document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
-    document.getElementById(id).classList.add('active');
-    document.querySelectorAll('.sidebar button').forEach(b=>b.classList.remove('active'));
-    if(id==='checkin') document.querySelector('.sidebar button:nth-of-type(1)').classList.add('active');
-    if(id==='students') document.querySelector('.sidebar button:nth-of-type(2)').classList.add('active');
-    if(id==='visitlog') document.querySelector('.sidebar button:nth-of-type(3)').classList.add('active');
-    if(id==='reports') document.querySelector('.sidebar button:nth-of-type(4)').classList.add('active');
+// --- TABS ---
+function openTab(id){
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  document.querySelectorAll('.sidebar button').forEach(b=>b.classList.remove('active'));
+  if(id==='checkin') document.querySelector('.sidebar button:nth-of-type(1)').classList.add('active');
+  if(id==='students') document.querySelector('.sidebar button:nth-of-type(2)').classList.add('active');
+  if(id==='visitlog') document.querySelector('.sidebar button:nth-of-type(3)').classList.add('active');
+  if(id==='reports') document.querySelector('.sidebar button:nth-of-type(4)').classList.add('active');
+}
+
+// --- MODALS ---
+function openModal(){ document.getElementById('modal').style.display='flex'; }
+function closeModal(){ document.getElementById('modal').style.display='none'; }
+function openEditModal(number, last, first, middle, course) {
+  editingStudentNumber = number;
+
+  document.getElementById('editNumber').value = number;
+  document.getElementById('editLast').value = last;
+  document.getElementById('editFirst').value = first;
+  document.getElementById('editMiddle').value = middle;
+  document.getElementById('editCourse').value = course;
+
+  document.getElementById('editModal').style.display = 'flex';
+}
+function closeEditModal(){ editingStudentNumber=null; document.getElementById('editModal').style.display='none'; }
+
+// --- STUDENTS ---
+function formatName(student) {
+ 
+  return `${student.last_name.toUpperCase()}, ${student.first_name.toUpperCase()} ${student.middle_name?.toUpperCase() || ""}`.trim();
+}
+
+async function loadStudents(search='') {
+  const res = await fetch(`${API}/students`);
+  const data = await res.json();
+
+  const filtered = data.filter(s =>
+    (s.student_number||'').includes(search) ||
+    (s.last_name||'').toLowerCase().includes(search.toLowerCase()) ||
+    (s.first_name||'').toLowerCase().includes(search.toLowerCase()) ||
+    (s.middle_name||'').toLowerCase().includes(search.toLowerCase()) ||
+    (s.course||'').toLowerCase().includes(search.toLowerCase())
+  );
+
+  filtered.sort((a,b)=>a.last_name.localeCompare(b.last_name));
+
+  studentTable.innerHTML = filtered.map(s => {
+    return `<tr>
+      <td>${s.student_number.toUpperCase()}</td>
+      <td>${formatName(s)}</td>
+      <td>${(s.course||'').toUpperCase()}</td>
+      <td style="display:flex; gap:5px;">
+        <button class="edit" onclick="openEditModal(
+          '${s.student_number}',
+          '${s.last_name}',
+          '${s.first_name}',
+          '${s.middle_name || ''}',
+          '${s.course || ''}'
+        )"><i class="fas fa-edit"></i></button>
+        <button class="delete" onclick="confirmDelete('${s.student_number}')">
+          <i class="fas fa-trash"></i>
+        </button>
+      </td>
+    </tr>`;
+  }).join('');
+}
+
+async function addStudent(){
+  const last = document.getElementById('newLast').value.trim();
+const first = document.getElementById('newFirst').value.trim();
+const middle = document.getElementById('newMiddle').value.trim();
+const number = document.getElementById('newNumber').value.trim();
+const course = document.getElementById('newCourse').value.trim();
+
+await fetch(`${API}/student`, {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({
+    student_number: number,
+    last_name: last,
+    first_name: first,
+    middle_name: middle,
+    course: course
+  })
+});
+
+closeModal(); 
+  loadStudents();
+}
+  
+// --- UPDATE STUDENT ---
+async function updateStudent(){
+  const number = document.getElementById("editNumber").value.trim();
+  const last = document.getElementById("editLast").value.trim();
+  const first = document.getElementById("editFirst").value.trim();
+  const middle = document.getElementById("editMiddle").value.trim();
+  const course = document.getElementById("editCourse").value.trim();
+
+  if(!number || !last || !first){
+    showNotification("Student Number, Last Name and First Name are required!", "error");
+    return;
   }
 
-  // --- MODALS ---
-  function openModal(){ document.getElementById('modal').style.display='flex'; }
-  function closeModal(){ document.getElementById('modal').style.display='none'; }
-  function openEditModal(number, last, first, middle, course) {
-    editingStudentNumber = number;
+  const full_name = `${last} ${first} ${middle}`.trim();
 
-    document.getElementById('editNumber').value = number;
-    document.getElementById('editLast').value = last;
-    document.getElementById('editFirst').value = first;
-    document.getElementById('editMiddle').value = middle;
-    document.getElementById('editCourse').value = course;
+  try{
+    const res = await fetch(`${API}/student/${editingStudentNumber}`,{
+      method:"PUT",
+      headers:{ "Content-Type":"application/json" },
+      body: JSON.stringify({
+        student_number: number,
+        full_name: full_name,
+        course: course
+      })
+    });
 
-    document.getElementById('editModal').style.display = 'flex';
+    if(res.ok){
+      showNotification("Student updated successfully!", "success");
+      closeEditModal();
+      loadStudents();
+      loadReports();
+    }else{
+      showNotification("Update failed!", "error");
+    }
+
+  }catch(err){
+    console.error(err);
+    showNotification("Server error!", "error");
   }
-  function closeEditModal(){ editingStudentNumber=null; document.getElementById('editModal').style.display='none'; }
+}
 
-  // --- STUDENTS ---
-  function formatName(student) {
-    return `${student.last_name.toUpperCase()}, ${student.first_name.toUpperCase()} ${student.middle_name?.toUpperCase() || ""}`.trim();
+// --- DELETE ---
+function confirmDelete(id){ studentToDelete=id; document.getElementById('deleteModal').style.display='flex'; }
+document.getElementById('cancelDelete').onclick = ()=>{ studentToDelete=null; document.getElementById('deleteModal').style.display='none'; }
+document.getElementById('confirmDelete').onclick = async ()=>{
+  if(studentToDelete){
+    await fetch(`${API}/student/${studentToDelete}`,{method:'DELETE'});
+    studentToDelete=null;
+    document.getElementById('deleteModal').style.display='none';
+    loadStudents();
   }
+}
 
-  async function loadStudents(search='') {
-    const res = await fetch(`${API}/students`);
-    const data = await res.json();
+// --- VISITS ---
+async function loadVisits(search='') {
+  const res = await fetch(`${API}/visits`);
+  const data = await res.json();
 
-    const filtered = data.filter(s =>
-      (s.student_number||'').includes(search) ||
-      (s.last_name||'').toLowerCase().includes(search.toLowerCase()) ||
-      (s.first_name||'').toLowerCase().includes(search.toLowerCase()) ||
-      (s.middle_name||'').toLowerCase().includes(search.toLowerCase()) ||
-      (s.course||'').toLowerCase().includes(search.toLowerCase())
-    );
+  const filtered = data.filter(v =>
+    v.student_number.toLowerCase().includes(search.toLowerCase()) ||
+    v.full_name.toLowerCase().includes(search.toLowerCase()) ||
+    v.course.toLowerCase().includes(search.toLowerCase())
+  );
 
-    filtered.sort((a,b)=>a.last_name.localeCompare(b.last_name));
+  // Sort by student name
+  const sorted = filtered.sort((a,b)=>{
+    return a.full_name.localeCompare(b.full_name);
+  });
 
-    studentTable.innerHTML = filtered.map(s => {
-      return `<tr>
-        <td>${s.student_number.toUpperCase()}</td>
-        <td>${formatName(s)}</td>
-        <td>${(s.course||'').toUpperCase()}</td>
-        <td style="display:flex; gap:5px;">
-          <button class="edit" onclick="openEditModal(
-            '${s.student_number}',
-            '${s.last_name}',
-            '${s.first_name}',
-            '${s.middle_name || ''}',
-            '${s.course || ''}'
-          )"><i class="fas fa-edit"></i></button>
-          <button class="delete" onclick="confirmDelete('${s.student_number}')">
-            <i class="fas fa-trash"></i>
-          </button>
-        </td>
-      </tr>`;
-    }).join('');
-  }
+  visitTable.innerHTML = sorted.map(v => `<tr>
+    <td>${v.student_number.toUpperCase()}</td>
+    <td>${v.full_name.toUpperCase()}</td>
+    <td>${v.course.toUpperCase()}</td>
+    <td>${new Date(v.visit_time).toLocaleString()}</td>
+  </tr>`).join('');
 
-  // --- VISITS ---
-  async function loadVisits(search='') {
-    const res = await fetch(`${API}/visits`);
-    const data = await res.json();
-
-    const filtered = data.filter(v =>
-      v.student_number.toLowerCase().includes(search.toLowerCase()) ||
-      v.full_name.toLowerCase().includes(search.toLowerCase()) ||
-      v.course.toLowerCase().includes(search.toLowerCase())
-    );
-
-    const sorted = filtered.sort((a,b)=> a.full_name.localeCompare(b.full_name));
-
-    visitTable.innerHTML = sorted.map(v => `<tr>
+  // Recent Visits
+  recentVisits.innerHTML = [...sorted].sort((a,b)=>new Date(b.visit_time)-new Date(a.visit_time))
+    .map((v,idx)=>`<tr class="${idx===0?'new-entry':''}">
       <td>${v.student_number.toUpperCase()}</td>
       <td>${v.full_name.toUpperCase()}</td>
       <td>${v.course.toUpperCase()}</td>
       <td>${new Date(v.visit_time).toLocaleString()}</td>
     </tr>`).join('');
+}
 
-    recentVisits.innerHTML = [...sorted].sort((a,b)=>new Date(b.visit_time)-new Date(a.visit_time))
-      .map((v,idx)=>`<tr class="${idx===0?'new-entry':''}">
-        <td>${v.student_number.toUpperCase()}</td>
-        <td>${v.full_name.toUpperCase()}</td>
-        <td>${v.course.toUpperCase()}</td>
-        <td>${new Date(v.visit_time).toLocaleString()}</td>
-      </tr>`).join('');
+// --- REPORTS ---
+async function loadReports(){
+  try{
+    const res = await fetch(`${API}/reports`);
+    const data = await res.json();
+
+    totalStudents.innerText = data.total_students;
+
+    // --- TOTAL VISITS ---
+    const visitsRes = await fetch(`${API}/visits`);
+    const visits = await visitsRes.json();
+
+    totalVisits.innerText = visits.length; 
+
+    // Peak month
+    if(data.peak_month && data.peak_month!=="N/A"){
+      const [year,month] = data.peak_month.split('-');
+      peakMonth.innerText = new Date(year,month-1)
+        .toLocaleString('default',{month:'long',year:'numeric'});
+    } else peakMonth.innerText="N/A";
+
+    // TOP STUDENT
+    const studentCount = {};
+    visits.forEach(v => studentCount[v.full_name] = (studentCount[v.full_name] || 0) + 1);
+    topStudent.innerText = Object.keys(studentCount)
+      .reduce((a,b) => studentCount[a] > studentCount[b] ? a : b, "N/A")
+      .toUpperCase();
+
+    // TOP COURSE
+    const courseCount = {};
+    visits.forEach(v => courseCount[v.course] = (courseCount[v.course] || 0) + 1);
+    topCourseVisits.innerText = Object.keys(courseCount)
+      .reduce((a,b) => courseCount[a] > courseCount[b] ? a : b, "N/A")
+      .toUpperCase(); 
+
+  }catch(err){
+    console.error(err);
   }
+}
 
-  // --- REPORTS ---
-  async function loadReports(){
-    try{
-      const res = await fetch(`${API}/reports`);
-      const data = await res.json();
+// --- EXPORT STUDENTS ---
+async function exportStudents(){
+  const res = await fetch(`${API}/students`);
+  let data = await res.json();
 
-      totalStudents.innerText = data.total_students;
+  data = data.filter(s => (s.student_number||'').trim() !== '' );
 
-      const visitsRes = await fetch(`${API}/visits`);
-      const visits = await visitsRes.json();
-      totalVisits.innerText = visits.length; 
+  data.sort((a,b) => a.full_name.localeCompare(b.full_name));
 
-      // TOP STUDENT
-      const studentCount = {};
-      visits.forEach(v => studentCount[v.full_name] = (studentCount[v.full_name] || 0) + 1);
-      topStudent.innerText = Object.keys(studentCount)
-        .reduce((a,b) => studentCount[a] > studentCount[b] ? a : b, "N/A")
-        .toUpperCase();
+  const ws = XLSX.utils.json_to_sheet([], { header:["student_number","full_name","course"] });
+  
+  XLSX.utils.sheet_add_json(ws, data, { skipHeader:true, origin:1 });
+  XLSX.utils.sheet_add_aoa(ws, [["Student Number","Full Name","Course"]], {origin:"A1"});
 
-      // TOP COURSE
-      const courseCount = {};
-      visits.forEach(v => courseCount[v.course] = (courseCount[v.course] || 0) + 1);
-      topCourseVisits.innerText = Object.keys(courseCount)
-        .reduce((a,b) => courseCount[a] > courseCount[b] ? a : b, "N/A")
-        .toUpperCase(); 
+  ws["!autofilter"] = { ref:"A1:C1" };
 
-    }catch(err){ console.error(err); }
-  }
+  ws["!cols"] = [
+    { wch: 20 },
+    { wch: 30 }, 
+    { wch: 15 }  
+  ];
 
-  // --- EVENT LISTENER FOR NEW CHECK-IN ---
-  window.addEventListener('newCheckin', async () => {
-    await loadVisits();
-    await loadReports();
-  });
+ 
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, "Students");
+  XLSX.writeFile(wb, `students_${new Date().toISOString().slice(0,10)}.xlsx`);
 
-  // --- AUTO REFRESH EVERY 10s ---
-  setInterval(async () => {
-    if(!autoRefreshEnabled) return; 
-    await loadVisits();
-    await loadReports();
-    await loadStudents();
-  }, 10000);
+  showNotification("Students exported successfully!", "success");
+}
+// --- EXPORT ANALYTICS ---
+async function exportAnalytics(){
+  try{
+    
+    const reportsRes = await fetch(`${API}/reports`);
+    const reports = await reportsRes.json();
 
-  // --- INITIAL LOAD ---
-  loadStudents();
-  loadVisits();
-  loadReports();
+  
+    const visitsRes = await fetch(`${API}/visits`);
+    const visits = await visitsRes.json();
 
-  // --- LOGOUT ---
-  function logout(){ 
-    localStorage.removeItem("adminLoggedIn"); 
-    window.location.href="admin-login.html"; 
-  }
+    const studentCount = {};
+    const courseCount = {};
 
-  // --- NOTIFICATION ---
-  function showNotification(message, type="info", duration=2500){
-    const container = document.getElementById("notification-container");
+    visits.forEach(v=>{
+      studentCount[v.full_name] = (studentCount[v.full_name] || 0) + 1;
+      courseCount[v.course] = (courseCount[v.course] || 0) + 1;
+    });
 
-    const notif = document.createElement("div");
-    notif.innerText = message;
-    notif.style.padding = "15px 25px";
-    notif.style.borderRadius = "12px";
-    notif.style.minWidth = "250px";
-    notif.style.textAlign = "center";
-    notif.style.color = "#fff";
-    notif.style.fontWeight = "600";
-    notif.style.pointerEvents = "auto";
-    notif.style.boxShadow = "0 4px 15px rgba(0,0,0,0.2)";
-    notif.style.opacity = "0";
-    notif.style.transition = "all 0.4s ease";
+    const topStudent = Object.keys(studentCount)
+      .reduce((a,b)=>studentCount[a]>studentCount[b]?a:b,"N/A");
 
-    if(type==="success") notif.style.background = "#27ae60";
-    else if(type==="error") notif.style.background = "#c0392b";
-    else if(type==="warning") notif.style.background = "#f39c12";
-    else notif.style.background = "#2980b9";
+    const topCourse = Object.keys(courseCount)
+      .reduce((a,b)=>courseCount[a]>courseCount[b]?a:b,"N/A");
 
-    container.appendChild(notif);
-    requestAnimationFrame(()=>{ notif.style.opacity = "1"; });
-    setTimeout(()=>{
-      notif.style.opacity = "0";
-      notif.addEventListener("transitionend", ()=>notif.remove());
-    }, duration);
-  }
-
-  // --- DROPDOWN ---
-  const toggleBtn = document.getElementById("menuToggle");
-  const dropdown = document.getElementById("dropdownMenu");
-  toggleBtn.addEventListener("click", function(e) {
-    e.stopPropagation(); 
-    dropdown.classList.toggle("show");
-  });
-  document.addEventListener("click", function(e) {
-    if (!dropdown.contains(e.target) && !toggleBtn.contains(e.target)) {
-      dropdown.classList.remove("show");
+    // format peak month
+    let peakMonth = "N/A";
+    if(reports.peak_month && reports.peak_month !== "N/A"){
+      const [year,month] = reports.peak_month.split("-");
+      peakMonth = new Date(year,month-1)
+        .toLocaleString('default',{month:'long',year:'numeric'});
     }
-  });
 
+    
+    const analyticsData = [
+      { Metric: "Total Students", Value: reports.total_students },
+      { Metric: "Total Visits", Value: reports.total_visits },
+      { Metric: "Peak Month", Value: peakMonth },
+      { Metric: "Top Student", Value: topStudent },
+      { Metric: "Top Course Visits", Value: topCourse }
+    ];
+
+    const ws = XLSX.utils.json_to_sheet(analyticsData);
+    ws["!cols"] = [{ wch: 25 }, { wch: 30 }];
+
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Analytics");
+
+    XLSX.writeFile(wb, "library_analytics.xlsx");
+
+  }catch(err){
+    console.error(err);
+    alert("Failed to export analytics!");
+  }
+}
+
+// --- BACKUP/RESTORE/DELETE ALL ---
+async function backupDatabase(){
+  try{
+    const res = await fetch(`${API}/backup/excel`);
+    if(!res.ok) throw new Error("Backup failed");
+    const blob = await res.blob();
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `Library_Backup_${new Date().toISOString().slice(0,10)}.xlsx`;
+    a.click();
+    URL.revokeObjectURL(url);
+    showNotification("Backup successful!", "success");
+  }catch(err){ console.error(err); alert("Backup failed!"); }
+}
+
+function restoreDatabase(event){
+  const file = event.target.files[0];
+  if(!file) return;
+
+  
+  const modal = document.getElementById("restoreModal");
+  modal.style.display = "flex";
+
+  
+  document.getElementById("cancelRestore").onclick = () => {
+    modal.style.display = "none";
+    event.target.value = ""; 
+  };
+
+  // Confirm button
+  document.getElementById("confirmRestore").onclick = async () => {
+    modal.style.display = "none";
+
+    const reader = new FileReader();
+
+    reader.onload = async function(e){
+      const data = new Uint8Array(e.target.result);
+      const workbook = XLSX.read(data,{type:"array"});
+
+      const studentsSheet = workbook.Sheets["Students"];
+      const visitsSheet = workbook.Sheets["Visits"];
+
+      const students = XLSX.utils.sheet_to_json(studentsSheet);
+      const visits = XLSX.utils.sheet_to_json(visitsSheet);
+
+      try{
+        autoRefreshEnabled = false;
+
+        const res = await fetch(`${API}/restore/database`,{
+          method:"POST",
+          headers:{ "Content-Type":"application/json" },
+          body: JSON.stringify({ students, visits })
+        });
+
+        const result = await res.json();
+        showNotification("Database restored successfully!", "success");
+
+        await loadStudents();
+        await loadVisits();
+        await loadReports();
+
+      }catch(err){
+        console.error(err);
+        showNotification("Restore failed!", "error");
+      }finally{
+        autoRefreshEnabled = true;
+      }
+    };
+
+    reader.readAsArrayBuffer(file);
+  };
+}
+async function deleteAllStudents(){
+  document.getElementById("deleteAllModal").style.display = "flex";
+}
+
+
+document.getElementById("cancelDeleteAll").onclick = () => {
+  document.getElementById("deleteAllModal").style.display = "none";
+};
+
+
+document.getElementById("confirmDeleteAll").onclick = async () => {
+  try{
+    const res = await fetch(`${API}/students`, { method: "DELETE" });
+    const data = await res.json();
+
+    document.getElementById("deleteAllModal").style.display = "none";
+
+    loadStudents();
+    loadReports();
+    showNotification(data.message || "All students and visits deleted!", "success");
+  }catch(err){
+    console.error(err);
+    showNotification("Delete failed!", "error");
+  }
+};
+
+function showNotification(message, type="info", duration=2500){
+  const container = document.getElementById("notification-container");
+
+  const notif = document.createElement("div");
+  notif.innerText = message;
+  notif.style.padding = "15px 25px";
+  notif.style.borderRadius = "12px";
+  notif.style.minWidth = "250px";
+  notif.style.textAlign = "center";
+  notif.style.color = "#fff";
+  notif.style.fontWeight = "600";
+  notif.style.pointerEvents = "auto";
+  notif.style.boxShadow = "0 4px 15px rgba(0,0,0,0.2)";
+  notif.style.opacity = "0";
+  notif.style.transition = "all 0.4s ease";
+
+  
+  if(type==="success") notif.style.background = "#27ae60";
+  else if(type==="error") notif.style.background = "#c0392b";
+  else if(type==="warning") notif.style.background = "#f39c12";
+  else notif.style.background = "#2980b9";
+
+  container.appendChild(notif);
+  requestAnimationFrame(()=>{ notif.style.opacity = "1"; });
+  setTimeout(()=>{
+    notif.style.opacity = "0";
+    notif.addEventListener("transitionend", ()=>notif.remove());
+  }, duration);
+}
+
+// --- LOGOUT ---
+function logout(){ localStorage.removeItem("adminLoggedIn"); window.location.href="admin-login.html"; }
+
+// --- AUTO REFRESH ---
+setInterval(async () => {
+  if(!autoRefreshEnabled) return; 
+  await loadVisits();
+  await loadReports();
+  await loadStudents();
+}, 10000);
+// INITIAL LOAD
+loadStudents(); loadVisits(); loadReports();
+
+// --- DROPDOWN ---
+const toggleBtn = document.getElementById("menuToggle");
+const dropdown = document.getElementById("dropdownMenu");
+toggleBtn.addEventListener("click", function(e) {
+  e.stopPropagation(); 
+  dropdown.classList.toggle("show");
+});
+document.addEventListener("click", function(e) {
+  if (!dropdown.contains(e.target) && !toggleBtn.contains(e.target)) {
+    dropdown.classList.remove("show");
+  }
+});
 </script>
 </body>
 </html>
