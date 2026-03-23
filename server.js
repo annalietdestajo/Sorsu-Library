@@ -17,8 +17,8 @@ app.get("/", (req, res) => {
 app.get("/admin", (req, res) => {
   res.sendFile(path.join(__dirname, "FRONTEND", "admin-login.html"));
 });
-const DB_PATH = process.env.DATABASE_PATH || "/mnt/data/database.db"; 
-const db = new sqlite3.Database(DB_PATH, err => {
+const DB_PATH = path.join("/mnt/data", "database.db");
+const db = new sqlite3.Database(DB_PATH, (err) => {
   if (err) console.error("Database error:", err.message);
   else console.log("Connected to database:", DB_PATH);
 });
