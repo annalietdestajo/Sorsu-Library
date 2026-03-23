@@ -121,7 +121,7 @@
 <body>
 
 <div class="login-box">
-  <img src="C:\Users\Administrator\OneDrive\Documents\Library Visitor Monitoring System\FRONTEND\Revised-SSU-Logo-small-as-of-04-30-2021.png" alt="School Logo">
+  <img src="Revised-SSU-Logo-small-as-of-04-30-2021.png" alt="School Logo">
 
   <h2>SORSU LIBRARY</h2>
 
@@ -166,12 +166,12 @@ password.addEventListener("keydown", e => {
   // --- LOGIN FUNCTION ---
   async function login(){
     try {
-      const res = await fetch("http://localhost:5000/admin/login",{
-        method:"POST",
+      const res = await fetch("/admin/login", {
+        method: "POST",
         headers:{ "Content-Type":"application/json" },
-        body:JSON.stringify({
-          username: document.getElementById("username").value,
-          password: document.getElementById("password").value
+        body: JSON.stringify({
+          username: username.value,
+          password: password.value
         })
       });
   
