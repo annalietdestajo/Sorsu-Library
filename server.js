@@ -206,6 +206,14 @@ app.get("/export/visits", async (req,res) => {
   res.send(buffer);
 });
 
-
+app.get("/test-supabase", async (req, res) => {
+  try {
+    const { data, error } = await supabase.from('students').select('*').limit(1);
+    if (error) throw error;
+    res.json({ success: true, count: data.length });
+  } catch (err) {
+    res.json({ success: false, error: err.message });
+  }
+});
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => console.log("Server running on port " + PORT));
