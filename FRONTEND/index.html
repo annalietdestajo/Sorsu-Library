@@ -17,7 +17,6 @@
     color:#333;
   }
   
-  /* LIGHT LOGIN BOX */
   .card{
     background:#ffffff;
     padding:60px 50px;
@@ -42,10 +41,7 @@
     100%{transform:translateY(0) scale(1);}
   }
   
-  h2{
-    color:#222;
-    margin-bottom:30px;
-  }
+  h2{ color:#222; margin-bottom:30px; }
   
   input{
     width:100%;
@@ -59,9 +55,7 @@
     color:#333;
   }
   
-  input::placeholder{
-    color:#777;
-  }
+  input::placeholder{ color:#777; }
   
   input:focus{
     border-color:#7a0000;
@@ -81,9 +75,7 @@
     transition:.3s;
   }
   
-  button:hover{
-    background:blue;
-  }
+  button:hover{ background:blue; }
   
   .register-btn{
     background:#fd7e0f;
@@ -92,12 +84,8 @@
     color:#fff;
   }
   
-  .register-card{
-    display:none;
-    margin-top:20px;
-  }
+  .register-card{ display:none; margin-top:20px; }
   
-  /* Popup Notification */
   .popup {
     position: fixed;
     top: 20px;
@@ -117,11 +105,9 @@
   }
   
   .popup.show { opacity:1; pointer-events:auto; }
-  
   .popup.success { background:#28a745; }
   .popup.error { background:#dc3545; }
-  
-  </style>
+</style>
 </head>
 
 <body>
@@ -143,11 +129,10 @@
   </div>
 </div>
 
-<!-- Popup container -->
 <div id="popup" class="popup"></div>
 
 <script>
-  const API='https://sorsu-library.onrender.com';
+const API='https://sorsu-library.onrender.com';
 const input = document.getElementById('studentNumber');
 const checkInBtn = document.getElementById('checkInBtn');
 const registerCard = document.getElementById('registerCard');
@@ -158,40 +143,19 @@ const regFirst = document.getElementById('regFirst');
 const regCourse = document.getElementById('regCourse');
 
 let studentsList = [];
-let visitsList = [];
 
-/* POPUP FUNCTION */
+/* POPUP */
 function showPopup(message, type='success', duration=3000){
   const popup = document.getElementById('popup');
   popup.innerText = message;
   popup.className = `popup show ${type}`;
-  
-  setTimeout(()=>{
-    popup.className = 'popup';
-  }, duration);
+  setTimeout(()=>{ popup.className='popup'; }, duration);
 }
 
-/* FOCUS */
-function focusMain(){
-  if(registerCard.style.display!=='block'){
-    input.focus();
-  } else {
-    regLast.focus();
-  }
-}
-
-/* ENTER KEY SUPPORT */
-input.addEventListener("keypress",e=>{
-  if(e.key==="Enter") checkIn();
-});
-
-/* FETCH DATA */
-async function fetchData(){
-  const studentsRes = await fetch(`${API}/students`);
-  studentsList = await studentsRes.json();
-
-  const visitsRes = await fetch(`${API}/visits`);
-  visitsList = await visitsRes.json();
+/* FETCH STUDENTS */
+async function fetchStudents(){
+  const res = await fetch(`${API}/students`);
+  studentsList = await res.json();
 }
 
 /* CHECK-IN */
@@ -199,24 +163,25 @@ async function checkIn(){
   const sn = input.value.trim();
   if(!sn) return showPopup('Please Enter Student Number','error');
 
-  await fetchData();
+  await fetchStudents();
   const student = studentsList.find(s => s.student_number === sn);
 
   if(student){
+    // Check-in existing student
     await fetch(`${API}/checkin`,{
       method:'POST',
       headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({student_number: sn})
+      body: JSON.stringify({ student_number: sn })
     });
 
-    const firstName = student.full_name.split(' ')[1]; 
-    showPopup(`Welcome ${firstName}`, 'success');
+    showPopup(`Welcome ${student.first_name}`, 'success');
 
     registerCard.style.display = 'none';
     registerButton.style.display = 'none';
-    checkInBtn.style.display = 'block';
     input.style.display = 'block';
+    checkInBtn.style.display = 'block';
   } else {
+    // Show registration form
     registerCard.style.display = 'block';
     registerButton.style.display = 'none';
     input.style.display = 'none';
@@ -235,12 +200,9 @@ async function registerStudent(){
   const first = regFirst.value.trim();
   const course = regCourse.value.trim();
 
-  if(!last || !first || !course)
-    return showPopup('Fill all fields','error');
+  if(!last || !first || !course) return showPopup('Fill all fields','error');
 
-  const fullName = `${last} ${first}`;
-
-  await fetch(`${API}/student`, {
+  await fetch(`${API}/student`,{
     method:'POST',
     headers:{'Content-Type':'application/json'},
     body: JSON.stringify({
@@ -252,49 +214,30 @@ async function registerStudent(){
     })
   });
 
-  await fetch(`${API}/checkin`, {
+  // Auto check-in
+  await fetch(`${API}/checkin`,{
     method:'POST',
     headers:{'Content-Type':'application/json'},
-    body:JSON.stringify({student_number: sn})
+    body: JSON.stringify({ student_number: sn })
   });
 
-  const firstName = fullName.split(' ')[1];
-  showPopup(`Registered & Welcome ${firstName}`, 'success');
+  showPopup(`Registered & Welcome ${first}`, 'success');
 
   registerCard.style.display = 'none';
-  checkInBtn.style.display = 'block';
   input.style.display = 'block';
+  checkInBtn.style.display = 'block';
 
   regLast.value = '';
   regFirst.value = '';
   regCourse.value = '';
-
   input.focus();
 }
 
-/* AUTO REFRESH */
-async function autoRefresh(){
-  await fetchData();
-  const currentSN = input.value.trim();
-  if(currentSN && studentsList.some(s=>s.student_number===currentSN)){
-    registerButton.style.display='none';
-    registerCard.style.display='none';
-  }
-}
+/* ENTER KEY SUPPORT */
+input.addEventListener("keypress", e => { if(e.key==="Enter") checkIn(); });
 
-window.onload=focusMain;
-setInterval(autoRefresh,5000);
+window.onload = () => { input.focus(); };
 
-/* INPUT NAVIGATION */
-regLast.addEventListener("keydown", e => { if(e.key === "ArrowDown"){ e.preventDefault(); regFirst.focus(); } });
-regFirst.addEventListener("keydown", e => { 
-  if(e.key === "ArrowDown"){ e.preventDefault(); regCourse.focus(); }
-  if(e.key === "ArrowUp"){ e.preventDefault(); regLast.focus(); }
-});
-regCourse.addEventListener("keydown", e => { 
-  if(e.key === "ArrowUp"){ e.preventDefault(); regFirst.focus(); }
-  if(e.key === "Enter"){ e.preventDefault(); registerStudent(); }
-});
 </script>
 </body>
 </html>
