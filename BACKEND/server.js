@@ -1,350 +1,155 @@
 const express = require("express");
-const sqlite3 = require("sqlite3").verbose();
+const { createClient } = require('@supabase/supabase-js');
 const cors = require("cors");
 const XLSX = require("xlsx");
+const path = require("path");
+
+const SUPABASE_URL = process.env.SUPABASE_URL;
+const SUPABASE_KEY = process.env.SUPABASE_KEY;
+const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
 
 const app = express();
 app.use(cors());
 app.use(express.json());
 
-const path = require("path");
+// --- Frontend routes ---
 app.use(express.static(path.join(__dirname, "FRONTEND")));
-app.get("/", (req, res) => {
-  res.sendFile(path.join(__dirname, "FRONTEND", "index.html"));
-});
-
-app.get("/admin", (req, res) => {
-  res.sendFile(path.join(__dirname, "FRONTEND", "admin-login.html"));
-});
-
-
-const path = require("path");
-
-const DB_PATH = path.join("/mnt/data", "database.db");
-
-const db = new sqlite3.Database(DB_PATH, (err) => {
-  if (err) {
-    console.error("Database error:", err.message);
-  } else {
-    console.log("Connected to database at", DB_PATH);
-  }
-});
-
-// --- CREATE TABLES ---
-db.serialize(() => {
-  db.run(`CREATE TABLE IF NOT EXISTS students (
-    student_number TEXT PRIMARY KEY,
-    full_name TEXT,
-    course TEXT
-  )`);
-
-  db.run(`CREATE TABLE IF NOT EXISTS visitor_log (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    student_number TEXT,
-    visit_time TEXT
-  )`);
-});
+app.get("/", (req, res) => res.sendFile(path.join(__dirname, "FRONTEND", "index.html")));
+app.get("/admin", (req, res) => res.sendFile(path.join(__dirname, "FRONTEND", "admin-login.html")));
 
 // --- ADD STUDENT ---
-app.post("/student", (req, res) => {
-  const { student_number, full_name, course } = req.body;
-  db.run(
-    `INSERT OR IGNORE INTO students(student_number, full_name, course) VALUES (?,?,?)`,
-    [student_number, full_name, course],
-    err => {
-      if (err) return res.status(400).json(err);
-      res.json({ message: "Student added" });
-    }
-  );
+app.post("/student", async (req, res) => {
+  const { student_number, last_name, first_name, middle_name, course } = req.body;
+  const { data, error } = await supabase
+    .from('students')
+    .insert([{ student_number, last_name, first_name, middle_name, course }])
+    .select();
+  if (error) return res.status(400).json(error);
+  res.json({ message: "Student added", student: data[0] });
 });
 
 // --- UPDATE STUDENT ---
-app.put("/student/:id", (req, res) => {
+app.put("/student/:id", async (req, res) => {
   const id = req.params.id;
-  const { full_name, course } = req.body;
-  db.run(
-    `UPDATE students SET full_name=?, course=? WHERE student_number=?`,
-    [full_name, course, id],
-    function(err) {
-      if(err) return res.status(500).json(err);
-      res.json({ message: "Student updated" });
-    }
-  );
+  const { last_name, first_name, middle_name, course } = req.body;
+  const { data, error } = await supabase
+    .from('students')
+    .update({ last_name, first_name, middle_name, course })
+    .eq('student_number', id)
+    .select();
+  if (error) return res.status(500).json(error);
+  res.json({ message: "Student updated", student: data[0] });
 });
 
 // --- DELETE STUDENT ---
-app.delete("/student/:id", (req, res) => {
+app.delete("/student/:id", async (req, res) => {
   const id = req.params.id;
-  db.run(
-    `DELETE FROM students WHERE student_number=?`,
-    [id],
-    function(err) {
-      if(err) return res.status(500).json(err);
-      res.json({ message: "Student deleted" });
-    }
-  );
+  const { error } = await supabase
+    .from('students')
+    .delete()
+    .eq('student_number', id);
+  if (error) return res.status(500).json(error);
+  res.json({ message: "Student deleted" });
 });
 
 // --- CHECK-IN ---
-app.post("/checkin", (req, res) => {
+app.post("/checkin", async (req, res) => {
   const { student_number } = req.body;
+  const { data: student, error: studentErr } = await supabase
+    .from('students')
+    .select('*')
+    .eq('student_number', student_number)
+    .single();
+  if (studentErr || !student) return res.status(404).json({ message: "Student not found" });
+
   const time = new Date().toISOString();
+  const { error: visitErr } = await supabase
+    .from('visitor_log')
+    .insert([{ student_number, visit_time: time }]);
+  if (visitErr) return res.status(500).json(visitErr);
 
-  db.get(`SELECT * FROM students WHERE student_number=?`, [student_number], (err, student) => {
-    if(err) return res.status(500).json(err);
-    if(!student) return res.status(404).json({ message: "Student not found" });
-
-    db.run(
-      `INSERT INTO visitor_log(student_number, visit_time) VALUES (?, ?)`,
-      [student_number, time],
-      err => {
-        if(err) return res.status(500).json(err);
-        res.json({ message: `Checked in: ${student.full_name}`, student });
-      }
-    );
-  });
+  const fullName = `${student.last_name}, ${student.first_name} ${student.middle_name || ""}`.trim();
+  res.json({ message: `Checked in: ${fullName}`, student });
 });
 
 // --- GET STUDENTS ---
-app.get("/students", (req, res) => {
-  db.all(`SELECT * FROM students ORDER BY full_name`, [], (err, rows) => {
-    if(err) return res.status(500).json(err);
-    res.json(rows || []);
-  });
+app.get("/students", async (req, res) => {
+  const { data, error } = await supabase
+    .from('students')
+    .select('*')
+    .order('last_name', { ascending: true });
+  if (error) return res.status(500).json(error);
+  res.json(data || []);
 });
 
 // --- GET VISITS ---
-app.get("/visits", (req, res) => {
+app.get("/visits", async (req, res) => {
   const search = req.query.search || "";
-  db.all(
-    `
-    SELECT v.id, s.student_number, s.full_name, s.course, v.visit_time
-    FROM visitor_log v
-    JOIN students s ON v.student_number = s.student_number
-    WHERE s.student_number LIKE ? OR s.full_name LIKE ? OR s.course LIKE ?
-    ORDER BY v.visit_time DESC
-    LIMIT 50
-  `,
-    [`%${search}%`,`%${search}%`,`%${search}%`],
-    (err, rows) => {
-      if(err) return res.status(500).json(err);
-      res.json(rows || []);
-    }
-  );
+  const { data, error } = await supabase
+    .from('visitor_log')
+    .select(`
+      id,
+      student_number,
+      students (
+        last_name,
+        first_name,
+        middle_name,
+        course
+      ),
+      visit_time
+    `)
+    .ilike('student_number', `%${search}%`);
+  if (error) return res.status(500).json(error);
+
+  const rows = data.map(v => ({
+    id: v.id,
+    student_number: v.student_number,
+    full_name: `${v.students.last_name}, ${v.students.first_name} ${v.students.middle_name || ""}`.trim(),
+    course: v.students.course,
+    visit_time: v.visit_time
+  }));
+
+  res.json(rows || []);
 });
 
 // --- REPORTS ---
-app.get("/reports", (req, res) => {
-  const reports = {};
+app.get("/reports", async (req, res) => {
+  const { count: total_students, error: studentsErr } = await supabase
+    .from('students')
+    .select('*', { count: 'exact', head: true });
+  if (studentsErr) return res.status(500).json(studentsErr);
 
-  db.get(`SELECT COUNT(*) AS total_students FROM students`, [], (err, row) => {
-    if(err) return res.status(500).json(err);
-    reports.total_students = row.total_students;
+  const { count: total_visits, data: visitsData, error: visitsErr } = await supabase
+    .from('visitor_log')
+    .select('*', { count: 'exact' });
+  if (visitsErr) return res.status(500).json(visitsErr);
 
-    db.get(`SELECT COUNT(*) AS total_visits FROM visitor_log`, [], (err, row2) => {
-      if(err) return res.status(500).json(err);
-      reports.total_visits = row2.total_visits;
+  const { data: topCourseData } = await supabase
+    .from('visitor_log')
+    .select('students(course)')
+    .order('students.course', { ascending: false })
+    .limit(1)
+    .single();
 
-      db.get(
-        `SELECT course, COUNT(*) AS count
-         FROM visitor_log v
-         JOIN students s ON v.student_number = s.student_number
-         GROUP BY course
-         ORDER BY count DESC
-         LIMIT 1`,
-        [], (err, row3) => {
-          reports.top_course = row3 ? row3.course : "N/A";
-
-          db.get(
-            `SELECT substr(visit_time,1,7) AS month, COUNT(*) AS count
-             FROM visitor_log
-             GROUP BY month
-             ORDER BY count DESC
-             LIMIT 1`,
-            [], (err, row4) => {
-              reports.peak_month = row4 ? row4.month : "N/A";
-              res.json(reports);
-            }
-          );
-        }
-      );
-    });
+  res.json({
+    total_students,
+    total_visits,
+    top_course: topCourseData ? topCourseData.students.course : "N/A"
   });
 });
 
 // --- CLEAR ALL STUDENTS ---
-app.post("/clear_students", (req, res) => {
-  db.run(`DELETE FROM students`, [], function(err){
-    if(err) return res.status(500).json({ error: "Failed to clear students" });
-    res.json({ success: true, message: "All students cleared" });
-  });
+app.post("/clear_students", async (req, res) => {
+  const { error } = await supabase.from('students').delete();
+  if (error) return res.status(500).json(error);
+  res.json({ success: true, message: "All students cleared" });
 });
 
 // --- CLEAR ALL VISITS ---
-app.post("/clear_visits", (req, res) => {
-  db.run(`DELETE FROM visitor_log`, [], function(err){
-    if(err) return res.status(500).json({ error: "Failed to clear visits" });
-    res.json({ success: true, message: "All visits cleared" });
-  });
-});
-
-// --- RESTORE VISITS ---
-app.post("/restore/visits", (req, res) => {
-  const visits = req.body; // [{student_number, visit_time}]
-  const stmt = db.prepare(`INSERT INTO visitor_log(student_number, visit_time) VALUES (?, ?)`);
-
-  db.serialize(()=>{
-    visits.forEach(v => stmt.run([v.student_number, v.visit_time]));
-    stmt.finalize(err => {
-      if(err) return res.status(500).json(err);
-      res.json({ message: "Visits restored successfully" });
-    });
-  });
-});
-
-// --- BACKUP (JSON) ---
-app.get('/backup', (req, res) => {
-  db.all('SELECT * FROM students', (err, students) => {
-    if(err) return res.status(500).json({error: err.message});
-
-    db.all('SELECT * FROM visitor_log', (err2, visits) => {
-      if(err2) return res.status(500).json({error: err2.message});
-
-      res.json({ students, visits });
-    });
-  });
-});
-
-// --- BACKUP (EXCEL) ---
-app.get("/backup/excel", (req, res) => {
-  db.all('SELECT * FROM students', (err, students) => {
-    if(err) return res.status(500).json({error: err.message});
-
-    db.all('SELECT * FROM visitor_log', (err2, visits) => {
-      if(err2) return res.status(500).json({error: err2.message});
-
-      const wb = XLSX.utils.book_new();
-      XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(students), "Students");
-      XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(visits), "Visits");
-
-      const buffer = XLSX.write(wb, { type: "buffer", bookType: "xlsx" });
-
-      res.setHeader("Content-Disposition", "attachment; filename=Library_Backup.xlsx");
-      res.setHeader("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
-      res.send(buffer);
-    });
-  });
-});
-
-// --- EXPORT STUDENTS ---
-app.get("/export/students", (req,res)=>{
-  db.all(`SELECT * FROM students ORDER BY full_name`, [], (err, rows)=>{
-    if(err) return res.status(500).json(err);
-
-    const ws = XLSX.utils.json_to_sheet(rows);
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, "Students");
-    const buffer = XLSX.write(wb, { type: "buffer", bookType: "xlsx" });
-
-    res.setHeader("Content-Disposition", "attachment; filename=students.xlsx");
-    res.setHeader("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
-    res.send(buffer);
-  });
-});
-
-// --- EXPORT VISITS ---
-app.get("/export/visits", (req,res)=>{
-  db.all(
-    `SELECT s.student_number, s.full_name, s.course, v.visit_time
-     FROM visitor_log v
-     JOIN students s ON v.student_number = s.student_number
-     ORDER BY v.visit_time DESC`,
-    [], (err, rows)=>{
-      if(err) return res.status(500).json(err);
-
-      const ws = XLSX.utils.json_to_sheet(
-        rows.map(r=>({
-          "Student Number": r.student_number,
-          "Full Name": r.full_name,
-          "Course": r.course,
-          "Date & Time": new Date(r.visit_time).toLocaleString()
-        }))
-      );
-
-      const wb = XLSX.utils.book_new();
-      XLSX.utils.book_append_sheet(wb, ws, "Visits");
-      const buffer = XLSX.write(wb, { type: "buffer", bookType: "xlsx" });
-
-      res.setHeader("Content-Disposition", "attachment; filename=visits.xlsx");
-      res.setHeader("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
-      res.send(buffer);
-    }
-  );
-});
-
-// --- DELETE ALL STUDENTS & VISITS ---
-app.delete("/students", (req, res) => {
-  db.serialize(() => {
-    db.run("DELETE FROM students");
-    db.run("DELETE FROM visitor_log");
-
-    db.run("DELETE FROM sqlite_sequence WHERE name='students'");
-    db.run("DELETE FROM sqlite_sequence WHERE name='visitor_log'");
-
-    res.json({ message: "All students and visits deleted successfully!" });
-  });
-});
-
-// --- RESTORE STUDENTS FROM EXCEL ---
-app.post("/restore/database", (req, res) => {
-
-  const { students, visits } = req.body;
-
-  if(!Array.isArray(students) || !Array.isArray(visits)){
-    return res.status(400).json({ error: "Invalid restore data" });
-  }
-
-  db.serialize(()=>{
-
-    // clear tables first
-    db.run("DELETE FROM students");
-    db.run("DELETE FROM visitor_log");
-
-    // restore students
-    const studentStmt = db.prepare(`
-      INSERT INTO students(student_number, full_name, course)
-      VALUES (?, ?, ?)
-    `);
-
-    students.forEach(s=>{
-      studentStmt.run(
-        s.student_number || "",
-        s.full_name || "",
-        s.course || ""
-      );
-    });
-
-    studentStmt.finalize();
-
-    // restore visits
-    const visitStmt = db.prepare(`
-      INSERT INTO visitor_log(student_number, visit_time)
-      VALUES (?, ?)
-    `);
-
-    visits.forEach(v=>{
-      visitStmt.run(
-        v.student_number || "",
-        v.visit_time || ""
-      );
-    });
-
-    visitStmt.finalize();
-
-    res.json({ message:"Database restored successfully" });
-
-  });
-
+app.post("/clear_visits", async (req, res) => {
+  const { error } = await supabase.from('visitor_log').delete();
+  if (error) return res.status(500).json(error);
+  res.json({ success: true, message: "All visits cleared" });
 });
 
 // --- ADMIN LOGIN ---
@@ -354,9 +159,52 @@ app.post("/admin/login",(req,res)=>{
   else res.json({success:false});
 });
 
+// --- EXPORT STUDENTS & VISITS TO EXCEL ---
+app.get("/export/students", async (req,res) => {
+  const { data: students, error } = await supabase.from('students').select('*');
+  if (error) return res.status(500).json(error);
+
+  const ws = XLSX.utils.json_to_sheet(students.map(s => ({
+    "Student Number": s.student_number,
+    "Last Name": s.last_name,
+    "First Name": s.first_name,
+    "Middle Name": s.middle_name,
+    "Course": s.course
+  })));
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, "Students");
+
+  const buffer = XLSX.write(wb, { type: "buffer", bookType: "xlsx" });
+  res.setHeader("Content-Disposition", "attachment; filename=students.xlsx");
+  res.setHeader("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+  res.send(buffer);
+});
+
+app.get("/export/visits", async (req,res) => {
+  const { data: visits, error } = await supabase
+    .from('visitor_log')
+    .select(`
+      id,
+      student_number,
+      students(last_name, first_name, middle_name, course),
+      visit_time
+    `);
+  if (error) return res.status(500).json(error);
+
+  const ws = XLSX.utils.json_to_sheet(visits.map(v => ({
+    "Student Number": v.student_number,
+    "Full Name": `${v.students.last_name}, ${v.students.first_name} ${v.students.middle_name || ""}`.trim(),
+    "Course": v.students.course,
+    "Date & Time": new Date(v.visit_time).toLocaleString()
+  })));
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, "Visits");
+
+  const buffer = XLSX.write(wb, { type: "buffer", bookType: "xlsx" });
+  res.setHeader("Content-Disposition", "attachment; filename=visits.xlsx");
+  res.setHeader("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+  res.send(buffer);
+});
 
 const PORT = process.env.PORT || 3000;
-
-app.listen(PORT, () => {
-  console.log("Server running on port " + PORT);
-});
+app.listen(PORT, () => console.log("Server running on port " + PORT));
