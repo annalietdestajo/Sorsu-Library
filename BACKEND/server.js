@@ -56,21 +56,25 @@ app.delete("/student/:id", async (req, res) => {
 // --- CHECK-IN ---
 app.post("/checkin", async (req, res) => {
   const { student_number } = req.body;
+
   const { data: student, error: studentErr } = await supabase
     .from('students')
     .select('*')
     .eq('student_number', student_number)
     .single();
-  if (studentErr || !student) return res.status(404).json({ message: "Student not found" });
 
-  const time = new Date().toISOString();
+  if (studentErr || !student) {
+    return res.status(404).json({ message: "Student not found" });
+  }
+
   const { error: visitErr } = await supabase
-    .from('visitor_log')
-    .insert([{ student_number, visit_time: time }]);
+    .from('visits')
+    .insert([{ student_number }]);
+
   if (visitErr) return res.status(500).json(visitErr);
 
-  const fullName = `${student.last_name}, ${student.first_name} ${student.middle_name || ""}`.trim();
-  res.json({ message: `Checked in: ${fullName}`, student });
+  const fullName = `${student.last_name}, ${student.first_name} ${student.middle_name || ""}`;
+  res.json({ message: `Checked in: ${fullName}` });
 });
 
 // --- GET STUDENTS ---
@@ -85,9 +89,8 @@ app.get("/students", async (req, res) => {
 
 // --- GET VISITS ---
 app.get("/visits", async (req, res) => {
-  const search = req.query.search || "";
   const { data, error } = await supabase
-    .from('visitor_log')
+    .from('visits')
     .select(`
       id,
       student_number,
@@ -97,20 +100,20 @@ app.get("/visits", async (req, res) => {
         middle_name,
         course
       ),
-      visit_time
-    `)
-    .ilike('student_number', `%${search}%`);
+      date
+    `);
+
   if (error) return res.status(500).json(error);
 
   const rows = data.map(v => ({
     id: v.id,
     student_number: v.student_number,
-    full_name: `${v.students.last_name}, ${v.students.first_name} ${v.students.middle_name || ""}`.trim(),
+    full_name: `${v.students.last_name}, ${v.students.first_name} ${v.students.middle_name || ""}`,
     course: v.students.course,
-    visit_time: v.visit_time
+    visit_time: v.date  
   }));
 
-  res.json(rows || []);
+  res.json(rows);
 });
 
 // --- REPORTS ---
