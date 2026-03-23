@@ -17,7 +17,7 @@ app.get("/", (req, res) => {
 app.get("/admin", (req, res) => {
   res.sendFile(path.join(__dirname, "FRONTEND", "admin-login.html"));
 });
-const path = require("path");
+
 
 const DB_PATH = path.join("/mnt/data", "database.db");
 
