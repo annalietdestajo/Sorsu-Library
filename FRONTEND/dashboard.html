@@ -644,33 +644,62 @@ button.secondary:hover { opacity: 0.9; transform: translateY(-2px);}
   }
   
   // --- VISITS ---
+  
   async function loadVisits(search='') {
+  try {
     const res = await fetch(`${API}/visits`);
     const data = await res.json();
-  
+
     const filtered = data.filter(v =>
       (v.student_number || '').toLowerCase().includes(search.toLowerCase()) ||
       (v.full_name || '').toLowerCase().includes(search.toLowerCase()) ||
       (v.course || '').toLowerCase().includes(search.toLowerCase())
     );
-  
-    // Latest visits sa taas
-    const sorted = filtered.sort((a,b)=> new Date(b.visit_time) - new Date(a.visit_time));
-  
-    visitTable.innerHTML = sorted.map(v => `<tr>
-      <td>${v.student_number.toUpperCase()}</td>
-      <td>${v.full_name.toUpperCase()}</td>
-      <td>${v.course.toUpperCase()}</td>
-      <td>${v.visit_time ? new Date(v.visit_time).toLocaleString() : new Date().toLocaleString()}</td>
-    </tr>`).join('');
-  
-    recentVisits.innerHTML = sorted.map((v,idx)=>`<tr class="${idx===0?'new-entry':''}">
+
+    // Sort by newest visit first
+    const sorted = filtered.sort((a,b) => new Date(b.visit_time) - new Date(a.visit_time));
+
+    // Clear tables first
+    visitTable.innerHTML = '';
+    recentVisits.innerHTML = '';
+
+    sorted.forEach((v, idx) => {
+      const visitTime = v.visit_time ? new Date(v.visit_time).toLocaleString() : new Date().toLocaleString();
+
+      // --- Visit Table ---
+      const row = document.createElement('tr');
+      row.innerHTML = `
         <td>${v.student_number.toUpperCase()}</td>
         <td>${v.full_name.toUpperCase()}</td>
         <td>${v.course.toUpperCase()}</td>
-        <td>${v.visit_time ? new Date(v.visit_time).toLocaleString() : new Date().toLocaleString()}</td>
-      </tr>`).join('');
+        <td>${visitTime}</td>
+      `;
+      visitTable.appendChild(row);
+
+      // --- Recent Visits ---
+      const recentRow = document.createElement('tr');
+      recentRow.innerHTML = `
+        <td>${v.student_number.toUpperCase()}</td>
+        <td>${v.full_name.toUpperCase()}</td>
+        <td>${v.course.toUpperCase()}</td>
+        <td>${visitTime}</td>
+      `;
+      // Highlight the newest visit
+      if(idx === 0){
+        recentRow.classList.add('new-entry');
+        recentRow.style.backgroundColor = '#d4edda'; // light green
+        setTimeout(() => { recentRow.style.backgroundColor = ''; recentRow.classList.remove('new-entry'); }, 4000);
+      }
+      recentVisits.appendChild(recentRow);
+    });
+
+    // Update total visits counter
+    totalVisits.innerText = sorted.length;
+
+  } catch(err) {
+    console.error('Error loading visits:', err);
   }
+}
   
   // --- REPORTS ---
   async function loadReports(){

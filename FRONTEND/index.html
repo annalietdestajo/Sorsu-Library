@@ -182,12 +182,15 @@ async function checkIn(){
     const result = await res.json();
 
     // Dispatch event for admin dashboard
-    const visitData = {
-      student_number: sn,
-      full_name: `${student.last_name}, ${student.first_name} ${student.middle_name || ""}`,
-      course: student.course || "",
-      date_time: new Date().toLocaleString() // use server timestamp if available
-    };
+    const visitEvent = new CustomEvent('newCheckin', {
+      detail: {
+        student_number: sn,
+        full_name: `${student.last_name.toUpperCase()}, ${student.first_name.toUpperCase()} ${student.middle_name?.toUpperCase()||""}`,
+        course: student.course || "",
+        date_time: new Date().toLocaleString()
+      }
+  });
+  window.dispatchEvent(visitEvent);
     window.dispatchEvent(new CustomEvent('newCheckin', { detail: visitData }));
 
     showPopup(`Welcome ${student.first_name}`, 'success');
