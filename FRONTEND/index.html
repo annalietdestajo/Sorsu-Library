@@ -162,6 +162,43 @@ async function fetchStudents(){
     console.error(err);
   }
 }
+async function checkInStudent() {
+  const studentNumber = document.getElementById('checkinNumber').value.trim();
+  if(!studentNumber){
+    showNotification("Enter student number to check in!", "error");
+    return;
+  }
+
+  try {
+    const res = await fetch(`${API}/checkin`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ student_number: studentNumber })
+    });
+
+    const data = await res.json();
+    if(res.ok){
+      showNotification(data.message, "success");
+
+      // Trigger newCheckin event para mag-update ang table
+      const event = new CustomEvent('newCheckin', { detail: {
+        student_number: studentNumber,
+        full_name: `${data.student.last_name} ${data.student.first_name}`,
+        course: data.student.course,
+        date_time: new Date().toLocaleString()
+      }});
+      window.dispatchEvent(event);
+
+      document.getElementById('checkinNumber').value = "";
+    } else {
+      showNotification(data.message || "Check-in failed", "error");
+    }
+
+  } catch(err) {
+    console.error(err);
+    showNotification("Server error during check-in!", "error");
+  }
+}
 
 /* CHECK-IN */
 async function checkIn(){
