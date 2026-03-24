@@ -514,32 +514,35 @@ button.secondary:hover { opacity: 0.9; transform: translateY(-2px);}
   
   // --- LIVE CHECK-IN UPDATES ---
   window.addEventListener('newCheckin', (e) => {
-      const v = e.detail;
-  
-      // Add to visitTable
-      const row = document.createElement('tr');
-      row.innerHTML = `
-          <td>${v.student_number.toUpperCase()}</td>
-          <td>${v.full_name.toUpperCase()}</td>
-          <td>${v.course.toUpperCase()}</td>
-          <td>${v.date_time || new Date().toLocaleString()}</td>
-      `;
-      visitTable.prepend(row);
-  
-      // Add to recentVisits
-      const recentRow = document.createElement('tr');
-      recentRow.classList.add('new-entry');
-      recentRow.innerHTML = `
-          <td>${v.student_number.toUpperCase()}</td>
-          <td>${v.full_name.toUpperCase()}</td>
-          <td>${v.course.toUpperCase()}</td>
-          <td>${v.date_time || new Date().toLocaleString()}</td>
-      `;
-      recentVisits.prepend(recentRow);
-  
-      // Update total visits counter
-      totalVisits.innerText = parseInt(totalVisits.innerText || 0) + 1;
-  });
+    const v = e.detail;
+    const fullName = v.full_name || `${v.last_name}, ${v.first_name} ${v.middle_name || ''}`.trim();
+    const visitTime = v.visit_time || new Date().toLocaleString();
+
+    // Add to visitTable
+    const row = document.createElement('tr');
+    row.innerHTML = `
+        <td>${(v.student_number||'').toUpperCase()}</td>
+        <td>${fullName.toUpperCase()}</td>
+        <td>${(v.course||'').toUpperCase()}</td>
+        <td>${visitTime}</td>
+    `;
+    visitTable.prepend(row);
+
+    // Add to recentVisits
+    const recentRow = document.createElement('tr');
+    recentRow.classList.add('new-entry');
+    recentRow.innerHTML = row.innerHTML;
+    recentVisits.prepend(recentRow);
+
+    // Highlight ng 4 seconds
+    setTimeout(() => {
+        recentRow.classList.remove('new-entry');
+        recentRow.style.backgroundColor = '';
+    }, 4000);
+
+    // Update total visits counter
+    totalVisits.innerText = parseInt(totalVisits.innerText || 0) + 1;
+});
   
   // --- TABS ---
   function openTab(id){
