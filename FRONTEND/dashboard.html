@@ -175,7 +175,7 @@ button.secondary:hover { opacity: 0.9; transform: translateY(-2px);}
   justify-content: center;
   align-items: center;
   transition: opacity 0.3s ease;
-  z-index: 1000; /
+  z-index: 1000; 
 }
 
 /* MODAL BOX */
@@ -196,7 +196,7 @@ button.secondary:hover { opacity: 0.9; transform: translateY(-2px);}
   margin-bottom: 12px;
   padding: 10px;
   border-radius: 8px;
-  border: 1px solid #ccc; /* dati white kaya invisible */
+  border: 1px solid #ccc; 
   color: #000;
   background: #fff;
   transition: all 0.3s ease;
@@ -495,6 +495,15 @@ button.secondary:hover { opacity: 0.9; transform: translateY(-2px);}
 
 <script>
   const API = 'https://sorsu-library.onrender.com';
+  const visitTable = document.getElementById("visitTable");
+  const recentVisits = document.getElementById("recentVisits");
+  const studentTable = document.getElementById("studentTable");
+
+  const totalStudents = document.getElementById("totalStudents");
+  const totalVisits = document.getElementById("totalVisits");
+  const peakMonth = document.getElementById("peakMonth");
+  const topStudent = document.getElementById("topStudent");
+  const topCourseVisits = document.getElementById("topCourseVisits");
   if(localStorage.getItem("adminLoggedIn")!=="true"){ 
     window.location.href="admin-login.html"; 
   }
@@ -502,21 +511,10 @@ button.secondary:hover { opacity: 0.9; transform: translateY(-2px);}
   let lastVisitId=null, studentToDelete=null, editingStudentNumber=null;
   let autoRefreshEnabled = true; 
 
-  window.addEventListener('newCheckin', async (e) => {
-    const v = e.detail;
-  
-    const tr = `<tr>
-      <td>${v.student_number.toUpperCase()}</td>
-      <td>${v.full_name.toUpperCase()}</td>
-      <td>${v.course.toUpperCase()}</td>
-      <td>${v.visit_time ? new Date(v.visit_time).toLocaleString() : new Date().toLocaleString()}</td>
-    </tr>`;
-  
-    visitTable.insertAdjacentHTML('afterbegin', tr);
-    recentVisits.insertAdjacentHTML('afterbegin', tr);
-  
+  async function refreshDashboard(){
+    await loadVisits();
     await loadReports();
-  });
+  }
   
 
 // --- TABS ---
@@ -669,10 +667,10 @@ async function loadVisits(search='') {
   const data = await res.json();
 
   const filtered = data.filter(v =>
-    v.student_number.toLowerCase().includes(search.toLowerCase()) ||
-    v.full_name.toLowerCase().includes(search.toLowerCase()) ||
-    v.course.toLowerCase().includes(search.toLowerCase())
-  );
+  (v.student_number || '').toLowerCase().includes(search.toLowerCase()) ||
+  (v.full_name || '').toLowerCase().includes(search.toLowerCase()) ||
+  (v.course || '').toLowerCase().includes(search.toLowerCase())
+);
 
   // Sort by student name
   const sorted = filtered.sort((a,b)=>{
@@ -953,13 +951,10 @@ function showNotification(message, type="info", duration=2500){
 // --- LOGOUT ---
 function logout(){ localStorage.removeItem("adminLoggedIn"); window.location.href="admin-login.html"; }
 
-// --- AUTO REFRESH ---
 setInterval(async () => {
   if(!autoRefreshEnabled) return; 
-  await loadVisits();
-  await loadReports();
-  await loadStudents();
-}, 10000);
+  await refreshDashboard();
+}, 3000);
 // INITIAL LOAD
 loadStudents(); loadVisits(); loadReports();
 

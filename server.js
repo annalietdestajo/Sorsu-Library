@@ -30,35 +30,11 @@ app.post("/student", async (req, res) => {
   res.json({ message: "Student added", student: data[0] });
 });
 
-// --- UPDATE STUDENT ---
-app.put("/student/:id", async (req, res) => {
-  const id = req.params.id;
-  const { last_name, first_name, middle_name, course } = req.body;
-  const { data, error } = await supabase
-    .from('students')
-    .update({ last_name, first_name, middle_name, course })
-    .eq('student_number', id)
-    .select();
-  if (error) return res.status(500).json(error);
-  res.json({ message: "Student updated", student: data[0] });
-});
-
-// --- DELETE STUDENT ---
-app.delete("/student/:id", async (req, res) => {
-  const id = req.params.id;
-  const { error } = await supabase
-    .from('students')
-    .delete()
-    .eq('student_number', id);
-  if (error) return res.status(500).json(error);
-  res.json({ message: "Student deleted" });
-});
-
 // --- CHECK-IN ---
 app.post("/checkin", async (req, res) => {
   const { student_number } = req.body;
 
-  
+  // Check if student exists
   const { data: student, error: studentErr } = await supabase
     .from('students')
     .select('*')
@@ -69,18 +45,17 @@ app.post("/checkin", async (req, res) => {
     return res.status(404).json({ message: "Student not found" });
   }
 
- 
+  // Insert into visits table
   const { error: visitErr } = await supabase
     .from('visits')
-    .insert([{ student_number }]);  
+    .insert([{ student_number }]);
 
   if (visitErr) return res.status(500).json(visitErr);
 
-  const fullName = `${student.last_name}, ${student.first_name} ${student.middle_name || ""}`;
-  
- 
-  res.json({ message: `Checked in: ${fullName}` });
+  const fullName = `${student.last_name} ${student.first_name}`;
+  res.json({ message: `Checked in: ${fullName}`, student });
 });
+
 // --- GET STUDENTS ---
 app.get("/students", async (req, res) => {
   const { data, error } = await supabase
@@ -112,9 +87,9 @@ app.get("/visits", async (req, res) => {
   const rows = data.map(v => ({
     id: v.id,
     student_number: v.student_number,
-    full_name: `${v.students.last_name}, ${v.students.first_name} ${v.students.middle_name || ""}`,
+    full_name: `${v.students.last_name} ${v.students.first_name} ${v.students.middle_name || ""}`.trim(),
     course: v.students.course,
-    visit_time: v.date  
+    visit_time: v.date
   }));
 
   res.json(rows);
@@ -127,13 +102,13 @@ app.get("/reports", async (req, res) => {
     .select('*', { count: 'exact', head: true });
   if (studentsErr) return res.status(500).json(studentsErr);
 
-  const { count: total_visits, data: visitsData, error: visitsErr } = await supabase
-    .from('visitor_log')
-    .select('*', { count: 'exact' });
+  const { count: total_visits, error: visitsErr } = await supabase
+    .from('visits')
+    .select('*', { count: 'exact', head: true });
   if (visitsErr) return res.status(500).json(visitsErr);
 
   const { data: topCourseData } = await supabase
-    .from('visitor_log')
+    .from('visits')
     .select('students(course)')
     .order('students.course', { ascending: false })
     .limit(1)
@@ -155,20 +130,20 @@ app.post("/clear_students", async (req, res) => {
 
 // --- CLEAR ALL VISITS ---
 app.post("/clear_visits", async (req, res) => {
-  const { error } = await supabase.from('visitor_log').delete();
+  const { error } = await supabase.from('visits').delete();
   if (error) return res.status(500).json(error);
   res.json({ success: true, message: "All visits cleared" });
 });
 
 // --- ADMIN LOGIN ---
-app.post("/admin/login",(req,res)=>{
+app.post("/admin/login", (req, res) => {
   const { username, password } = req.body;
-  if(username==="admin" && password==="1234") res.json({success:true});
-  else res.json({success:false});
+  if (username === "admin" && password === "1234") res.json({ success: true });
+  else res.json({ success: false });
 });
 
-// --- EXPORT STUDENTS & VISITS TO EXCEL ---
-app.get("/export/students", async (req,res) => {
+// --- EXPORT STUDENTS ---
+app.get("/export/students", async (req, res) => {
   const { data: students, error } = await supabase.from('students').select('*');
   if (error) return res.status(500).json(error);
 
@@ -188,22 +163,19 @@ app.get("/export/students", async (req,res) => {
   res.send(buffer);
 });
 
-app.get("/export/visits", async (req,res) => {
+// --- EXPORT VISITS ---
+app.get("/export/visits", async (req, res) => {
   const { data: visits, error } = await supabase
-    .from('visitor_log')
-    .select(`
-      id,
-      student_number,
-      students(last_name, first_name, middle_name, course),
-      visit_time
-    `);
+    .from('visits')
+    .select(` id, student_number, students(last_name, first_name, middle_name, course), date `);
+
   if (error) return res.status(500).json(error);
 
   const ws = XLSX.utils.json_to_sheet(visits.map(v => ({
     "Student Number": v.student_number,
-    "Full Name": `${v.students.last_name}, ${v.students.first_name} ${v.students.middle_name || ""}`.trim(),
+    "Full Name": `${v.students.last_name} ${v.students.first_name} ${v.students.middle_name || ""}`.trim(),
     "Course": v.students.course,
-    "Date & Time": new Date(v.visit_time).toLocaleString()
+    "Date & Time": new Date(v.date).toLocaleString()
   })));
   const wb = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, ws, "Visits");
@@ -214,6 +186,7 @@ app.get("/export/visits", async (req,res) => {
   res.send(buffer);
 });
 
+// --- TEST SUPABASE ---
 app.get("/test-supabase", async (req, res) => {
   try {
     const { data, error } = await supabase.from('students').select('*').limit(1);
@@ -223,5 +196,6 @@ app.get("/test-supabase", async (req, res) => {
     res.json({ success: false, error: err.message });
   }
 });
+
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => console.log("Server running on port " + PORT));

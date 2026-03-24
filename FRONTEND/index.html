@@ -154,8 +154,13 @@ function showPopup(message, type='success', duration=3000){
 
 /* FETCH STUDENTS */
 async function fetchStudents(){
-  const res = await fetch(`${API}/students`);
-  studentsList = await res.json();
+  try{
+    const res = await fetch(`${API}/students`);
+    studentsList = await res.json();
+  }catch(err){
+    showPopup("Server error!", "error");
+    console.error(err);
+  }
 }
 
 /* CHECK-IN */
@@ -176,12 +181,10 @@ async function checkIn(){
 
     const visitData = {
       student_number: sn,
-      full_name: `${last} ${first}`,
-      course: course || ""
+      full_name: `${student.last_name} ${student.first_name}`,
+      course: student.course || ""
     };
-    window.dispatchEvent(new CustomEvent('newCheckin', { detail: visitData }));
     
-    showPopup(`Checked in: ${visitData.full_name}`, 'success');
 
     showPopup(`Welcome ${student.first_name}`, 'success');
 
@@ -200,6 +203,13 @@ async function checkIn(){
   }
 
   input.value = '';
+}
+
+function showRegisterCard(){
+  registerCard.style.display = 'block';
+  registerButton.style.display = 'none';
+  input.style.display = 'none';
+  checkInBtn.style.display = 'none';
 }
 
 /* REGISTER STUDENT */
