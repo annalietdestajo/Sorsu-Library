@@ -495,55 +495,57 @@ button.secondary:hover { opacity: 0.9; transform: translateY(-2px);}
 
 <script>
   const API = 'https://sorsu-library.onrender.com';
+
+  // --- ELEMENT REFERENCES ---
   const visitTable = document.getElementById("visitTable");
   const recentVisits = document.getElementById("recentVisits");
   const studentTable = document.getElementById("studentTable");
-  
+
   const totalStudents = document.getElementById("totalStudents");
   const totalVisits = document.getElementById("totalVisits");
   const peakMonth = document.getElementById("peakMonth");
   const topStudent = document.getElementById("topStudent");
   const topCourseVisits = document.getElementById("topCourseVisits");
-  
+
   if(localStorage.getItem("adminLoggedIn")!=="true"){ 
     window.location.href="admin-login.html"; 
   }
-  
+
   let lastVisitId=null, studentToDelete=null, editingStudentNumber=null;
   let autoRefreshEnabled = true; 
-  
+
   // --- LIVE CHECK-IN UPDATES ---
   window.addEventListener('newCheckin', (e) => {
-    const v = e.detail;
-    const fullName = v.full_name || `${v.last_name}, ${v.first_name} ${v.middle_name || ''}`.trim();
-    const visitTime = v.visit_time || new Date().toLocaleString();
+      const v = e.detail;
+      const fullName = v.full_name || `${v.last_name}, ${v.first_name} ${v.middle_name || ''}`.trim();
+      const visitTime = v.visit_time || new Date().toLocaleString();
 
-    // Add to visitTable
-    const row = document.createElement('tr');
-    row.innerHTML = `
-        <td>${(v.student_number||'').toUpperCase()}</td>
-        <td>${fullName.toUpperCase()}</td>
-        <td>${(v.course||'').toUpperCase()}</td>
-        <td>${visitTime}</td>
-    `;
-    visitTable.prepend(row);
+      // --- Visit Table ---
+      const row = document.createElement('tr');
+      row.innerHTML = `
+          <td>${(v.student_number||'').toUpperCase()}</td>
+          <td>${fullName.toUpperCase()}</td>
+          <td>${(v.course||'').toUpperCase()}</td>
+          <td>${visitTime}</td>
+      `;
+      visitTable.prepend(row);
 
-    // Add to recentVisits
-    const recentRow = document.createElement('tr');
-    recentRow.classList.add('new-entry');
-    recentRow.innerHTML = row.innerHTML;
-    recentVisits.prepend(recentRow);
+      // --- Recent Visits ---
+      const recentRow = document.createElement('tr');
+      recentRow.classList.add('new-entry');
+      recentRow.innerHTML = row.innerHTML;
+      recentRow.style.backgroundColor = '#d4edda'; // light green
+      recentVisits.prepend(recentRow);
 
-    // Highlight ng 4 seconds
-    setTimeout(() => {
-        recentRow.classList.remove('new-entry');
-        recentRow.style.backgroundColor = '';
-    }, 4000);
+      setTimeout(() => { 
+          recentRow.classList.remove('new-entry'); 
+          recentRow.style.backgroundColor = ''; 
+      }, 4000);
 
-    // Update total visits counter
-    totalVisits.innerText = parseInt(totalVisits.innerText || 0) + 1;
-});
-  
+      // --- Update total visits ---
+      totalVisits.innerText = parseInt(totalVisits.innerText || 0) + 1;
+  });
+
   // --- TABS ---
   function openTab(id){
     document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
@@ -554,7 +556,7 @@ button.secondary:hover { opacity: 0.9; transform: translateY(-2px);}
     if(id==='visitlog') document.querySelector('.sidebar button:nth-of-type(3)').classList.add('active');
     if(id==='reports') document.querySelector('.sidebar button:nth-of-type(4)').classList.add('active');
   }
-  
+
   // --- MODALS ---
   function openModal(){ document.getElementById('modal').style.display='flex'; }
   function closeModal(){ document.getElementById('modal').style.display='none'; }
@@ -568,58 +570,62 @@ button.secondary:hover { opacity: 0.9; transform: translateY(-2px);}
     document.getElementById('editModal').style.display = 'flex';
   }
   function closeEditModal(){ editingStudentNumber=null; document.getElementById('editModal').style.display='none'; }
-  
+
   // --- STUDENTS ---
   function formatName(student) {
     return `${student.last_name.toUpperCase()}, ${student.first_name.toUpperCase()} ${student.middle_name?.toUpperCase() || ""}`.trim();
   }
-  
+
   async function loadStudents(search='') {
-    const res = await fetch(`${API}/students`);
-    const data = await res.json();
-  
-    const filtered = data.filter(s =>
-      (s.student_number||'').includes(search) ||
-      (s.last_name||'').toLowerCase().includes(search.toLowerCase()) ||
-      (s.first_name||'').toLowerCase().includes(search.toLowerCase()) ||
-      (s.middle_name||'').toLowerCase().includes(search.toLowerCase()) ||
-      (s.course||'').toLowerCase().includes(search.toLowerCase())
-    );
-  
-    filtered.sort((a,b)=>a.last_name.localeCompare(b.last_name));
-  
-    studentTable.innerHTML = filtered.map(s => {
-      return `<tr>
-        <td>${s.student_number.toUpperCase()}</td>
-        <td>${formatName(s)}</td>
-        <td>${(s.course||'').toUpperCase()}</td>
-        <td style="display:flex; gap:5px;">
-          <button class="edit" onclick="openEditModal(
-            '${s.student_number}',
-            '${s.last_name}',
-            '${s.first_name}',
-            '${s.middle_name || ''}',
-            '${s.course || ''}'
-          )"><i class="fas fa-edit"></i></button>
-          <button class="delete" onclick="confirmDelete('${s.student_number}')">
-            <i class="fas fa-trash"></i>
-          </button>
-        </td>
-      </tr>`}).join('');
+    try{
+      const res = await fetch(`${API}/students`);
+      const data = await res.json();
+
+      const filtered = data.filter(s =>
+        (s.student_number||'').includes(search) ||
+        (s.last_name||'').toLowerCase().includes(search.toLowerCase()) ||
+        (s.first_name||'').toLowerCase().includes(search.toLowerCase()) ||
+        (s.middle_name||'').toLowerCase().includes(search.toLowerCase()) ||
+        (s.course||'').toLowerCase().includes(search.toLowerCase())
+      );
+
+      filtered.sort((a,b)=>a.last_name.localeCompare(b.last_name));
+
+      studentTable.innerHTML = filtered.map(s => {
+        return `<tr>
+          <td>${s.student_number.toUpperCase()}</td>
+          <td>${formatName(s)}</td>
+          <td>${(s.course||'').toUpperCase()}</td>
+          <td style="display:flex; gap:5px;">
+            <button class="edit" onclick="openEditModal(
+              '${s.student_number}',
+              '${s.last_name}',
+              '${s.first_name}',
+              '${s.middle_name || ''}',
+              '${s.course || ''}'
+            )"><i class="fas fa-edit"></i></button>
+            <button class="delete" onclick="confirmDelete('${s.student_number}')">
+              <i class="fas fa-trash"></i>
+            </button>
+          </td>
+        </tr>`}).join('');
+    } catch(err){
+      console.error(err);
+    }
   }
-  
+
   async function updateStudent(){
     const number = document.getElementById("editNumber").value.trim();
     const last = document.getElementById("editLast").value.trim();
     const first = document.getElementById("editFirst").value.trim();
     const middle = document.getElementById("editMiddle").value.trim();
     const course = document.getElementById("editCourse").value.trim();
-  
+
     if(!number || !last || !first){
       showNotification("Student Number, Last Name and First Name are required!", "error");
       return;
     }
-  
+
     try{
       const res = await fetch(`${API}/student/${editingStudentNumber}`,{
         method:"PUT",
@@ -631,7 +637,7 @@ button.secondary:hover { opacity: 0.9; transform: translateY(-2px);}
           course: course
         })
       });
-  
+
       if(res.ok){
         showNotification("Student updated successfully!", "success");
         closeEditModal();
@@ -645,84 +651,71 @@ button.secondary:hover { opacity: 0.9; transform: translateY(-2px);}
       showNotification("Server error!", "error");
     }
   }
-  
+
   // --- VISITS ---
-  
   async function loadVisits(search='') {
-  try {
-    const res = await fetch(`${API}/visits`);
-    const data = await res.json();
+    try {
+      const res = await fetch(`${API}/visits`);
+      const data = await res.json();
 
-    const filtered = data.filter(v =>
-      (v.student_number || '').toLowerCase().includes(search.toLowerCase()) ||
-      (v.full_name || '').toLowerCase().includes(search.toLowerCase()) ||
-      (v.course || '').toLowerCase().includes(search.toLowerCase())
-    );
+      const filtered = data.filter(v =>
+        (v.student_number || '').toLowerCase().includes(search.toLowerCase()) ||
+        (v.full_name || '').toLowerCase().includes(search.toLowerCase()) ||
+        (v.course || '').toLowerCase().includes(search.toLowerCase())
+      );
 
-    // Sort by newest visit first
-    const sorted = filtered.sort((a,b) => new Date(b.visit_time) - new Date(a.visit_time));
+      const sorted = filtered.sort((a,b) => new Date(b.visit_time) - new Date(a.visit_time));
 
-    // Clear tables first
-    visitTable.innerHTML = '';
-    recentVisits.innerHTML = '';
+      visitTable.innerHTML = '';
+      recentVisits.innerHTML = '';
 
-    sorted.forEach((v, idx) => {
-      const visitTime = v.visit_time ? new Date(v.visit_time).toLocaleString() : new Date().toLocaleString();
+      sorted.forEach((v, idx) => {
+        const visitTime = v.visit_time ? new Date(v.visit_time).toLocaleString() : new Date().toLocaleString();
+        const fullName = v.full_name || `${v.last_name}, ${v.first_name} ${v.middle_name || ''}`.trim();
 
-      // --- Visit Table ---
-      const row = document.createElement('tr');
-      row.innerHTML = `
-        <td>${v.student_number.toUpperCase()}</td>
-        <td>${v.full_name.toUpperCase()}</td>
-        <td>${v.course.toUpperCase()}</td>
-        <td>${visitTime}</td>
-      `;
-      visitTable.appendChild(row);
+        const row = document.createElement('tr');
+        row.innerHTML = `
+          <td>${(v.student_number||'').toUpperCase()}</td>
+          <td>${fullName.toUpperCase()}</td>
+          <td>${(v.course||'').toUpperCase()}</td>
+          <td>${visitTime}</td>
+        `;
+        visitTable.appendChild(row);
 
-      // --- Recent Visits ---
-      const recentRow = document.createElement('tr');
-      recentRow.innerHTML = `
-        <td>${v.student_number.toUpperCase()}</td>
-        <td>${v.full_name.toUpperCase()}</td>
-        <td>${v.course.toUpperCase()}</td>
-        <td>${visitTime}</td>
-      `;
-      // Highlight the newest visit
-      if(idx === 0){
-        recentRow.classList.add('new-entry');
-        recentRow.style.backgroundColor = '#d4edda'; // light green
-        setTimeout(() => { recentRow.style.backgroundColor = ''; recentRow.classList.remove('new-entry'); }, 4000);
-      }
-      recentVisits.appendChild(recentRow);
-    });
+        const recentRow = document.createElement('tr');
+        recentRow.innerHTML = row.innerHTML;
+        if(idx===0){
+          recentRow.classList.add('new-entry');
+          recentRow.style.backgroundColor = '#d4edda';
+          setTimeout(() => { recentRow.classList.remove('new-entry'); recentRow.style.backgroundColor=''; }, 4000);
+        }
+        recentVisits.appendChild(recentRow);
+      });
 
-    // Update total visits counter
-    totalVisits.innerText = sorted.length;
+      totalVisits.innerText = sorted.length;
 
-  } catch(err) {
-    console.error('Error loading visits:', err);
+    } catch(err) {
+      console.error('Error loading visits:', err);
+    }
   }
-}
-  
+
   // --- REPORTS ---
   async function loadReports(){
     try{
       const res = await fetch(`${API}/reports`);
       const data = await res.json();
       totalStudents.innerText = data.total_students;
-  
+
       const visitsRes = await fetch(`${API}/visits`);
       const visits = await visitsRes.json();
       totalVisits.innerText = visits.length;
-  
-      // TOP STUDENT
+
       const studentCount = {};
       visits.forEach(v => studentCount[v.full_name] = (studentCount[v.full_name] || 0) + 1);
       topStudent.innerText = Object.keys(studentCount)
         .reduce((a,b)=>studentCount[a]>studentCount[b]?a:b,"N/A")
         .toUpperCase();
-  
-      // TOP COURSE
+
       const courseCount = {};
       visits.forEach(v => courseCount[v.course] = (courseCount[v.course] || 0) + 1);
       topCourseVisits.innerText = Object.keys(courseCount)
@@ -733,24 +726,21 @@ button.secondary:hover { opacity: 0.9; transform: translateY(-2px);}
     }
   }
 
-  
-  
   // --- INITIAL LOAD & AUTO REFRESH ---
   async function refreshDashboard(){
     await loadVisits();
     await loadReports();
   }
-  
+
   setInterval(async () => {
     if(!autoRefreshEnabled) return; 
     await refreshDashboard();
   }, 3000);
-  
+
   loadStudents();
   loadVisits();
   loadReports();
-  
-  </script>
- 
+
+</script>
 </body>
 </html>
