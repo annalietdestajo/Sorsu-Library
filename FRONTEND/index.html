@@ -173,18 +173,22 @@ async function checkIn(){
 
   if(student){
     // Check-in existing student
-    await fetch(`${API}/checkin`,{
+    const res = await fetch(`${API}/checkin`,{
       method:'POST',
       headers:{'Content-Type':'application/json'},
       body: JSON.stringify({ student_number: sn })
     });
 
+    const result = await res.json();
+
+    // Dispatch event for admin dashboard
     const visitData = {
       student_number: sn,
-      full_name: `${student.last_name} ${student.first_name}`,
-      course: student.course || ""
+      full_name: `${student.last_name}, ${student.first_name} ${student.middle_name || ""}`,
+      course: student.course || "",
+      date_time: new Date().toLocaleString() // use server timestamp if available
     };
-    
+    window.dispatchEvent(new CustomEvent('newCheckin', { detail: visitData }));
 
     showPopup(`Welcome ${student.first_name}`, 'success');
 
@@ -203,13 +207,6 @@ async function checkIn(){
   }
 
   input.value = '';
-}
-
-function showRegisterCard(){
-  registerCard.style.display = 'block';
-  registerButton.style.display = 'none';
-  input.style.display = 'none';
-  checkInBtn.style.display = 'none';
 }
 
 /* REGISTER STUDENT */
@@ -234,11 +231,21 @@ async function registerStudent(){
   });
 
   // Auto check-in
-  await fetch(`${API}/checkin`,{
+  const res = await fetch(`${API}/checkin`,{
     method:'POST',
     headers:{'Content-Type':'application/json'},
     body: JSON.stringify({ student_number: sn })
   });
+  const result = await res.json();
+
+  // Dispatch event for admin dashboard
+  const visitData = {
+    student_number: sn,
+    full_name: `${last}, ${first}`,
+    course: course,
+    date_time: new Date().toLocaleString() // use server timestamp if available
+  };
+  window.dispatchEvent(new CustomEvent('newCheckin', { detail: visitData }));
 
   showPopup(`Registered & Welcome ${first}`, 'success');
 
@@ -251,7 +258,6 @@ async function registerStudent(){
   regCourse.value = '';
   input.focus();
 }
-
 /* ENTER KEY SUPPORT */
 input.addEventListener("keypress", e => { if(e.key==="Enter") checkIn(); });
 
